@@ -1,0 +1,5 @@
+praw
+streamlit
+google-generativeai
+pandas
+python-dotenv

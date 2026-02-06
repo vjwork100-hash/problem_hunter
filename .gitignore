@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+
+# Environment Variables
+.env
+
+# Project specific
+cache/
+*.csv
+
+# OS
+.DS_Store
