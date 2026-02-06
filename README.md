@@ -1,49 +1,98 @@
 # Problem Hunter
 
-**Problem Hunter** is an AI-powered research tool that scans Reddit for business problems and proposes micro-SaaS solutions.
+An educational research tool for studying pain point discussions in business-focused Reddit communities.
 
-## 🚀 Quick Start
+## 📚 Purpose
 
-### 1. Requirements
-You need two things:
-1.  **Reddit API**: Go to [https://www.reddit.com/prefs/apps](https://www.reddit.com/prefs/apps), create a "script" app. Note the `client_id` (under the name) and `client_secret`.
-2.  **Gemini API**: Get your key from [Google AI Studio](https://aistudio.google.com/).
+This is a **learning project** exploring:
+- Natural language processing for sentiment analysis
+- Market research methodologies
+- Pattern recognition in community discussions
 
-### 2. Setup Environment
-Rename `.env.example` to `.env` and fill in your keys:
+Results are used to understand how online communities discuss workflow challenges and identify common themes.
 
+## 🔍 How It Works
+
+1. **Read-Only Access**: Searches public posts in business subreddits
+2. **Pattern Analysis**: Uses AI to identify recurring workflow problems
+3. **Local Processing**: All analysis happens locally, no data redistribution
+
+## 🎯 Target Communities
+
+Focuses on public business/entrepreneurship subreddits where users actively discuss workflow challenges:
+- r/Entrepreneur
+- r/smallbusiness
+- r/SaaS
+- r/startups
+- r/marketing
+- r/freelance
+
+## 🛡️ Privacy & Ethics
+
+- **Read-only**: No posting, commenting, or voting
+- **Public data only**: Only analyzes publicly visible posts
+- **No redistribution**: Data not shared, sold, or redistributed
+- **Rate limited**: Respects Reddit API limits (<60 requests/minute)
+- **Local storage**: Caches results locally for deduplication only
+- **Educational use**: Non-commercial research and learning
+
+## 🔧 Technical Stack
+
+- **Python 3.10+**
+- **PRAW**: Reddit API wrapper for read-only access
+- **Google Gemini**: AI analysis for pattern recognition
+- **Streamlit**: Simple web interface
+- **Local caching**: SQLite for minimizing redundant API calls
+
+## 📊 API Usage
+
+- **Volume**: <1,000 requests per day
+- **Rate**: <60 requests per minute
+- **Scope**: Public posts only, no private/restricted content
+- **Authentication**: Standard OAuth2 via PRAW
+
+## 🚀 Setup
 ```bash
-cp .env.example .env
-# Edit .env with your keys
-```
-
-### 3. Install Dependencies
-```bash
+# Install dependencies
 pip install -r requirements.txt
-```
 
-### 4. Run the App
-```bash
+# Configure API keys (create .env file)
+REDDIT_CLIENT_ID=your_id
+REDDIT_CLIENT_SECRET=your_secret
+REDDIT_USER_AGENT=ProblemHunter/1.0
+GOOGLE_API_KEY=your_gemini_key
+
+# Run
 streamlit run app.py
 ```
 
-## 🎯 How to Use
+## 📝 How to Use
 
-1.  **Sidebar Config**: Check your API keys are loaded.
-2.  **Define Scope**:
-    *   **Subreddits**: Comma-separated list (e.g., `SaaS, Entrepreneur, marketing`).
-    *   **Keywords**: Pain indicators (e.g., `hate, manual, struggle`).
-    *   **Max Posts**: Start low (e.g., 20) to save API quota.
-3.  **Start Hunting**: Click **[🚀 Start Hunting]**.
-    *   The app will first scan Reddit and filter for "pain" keywords.
-    *   Then, Gemini will analyze the filtered posts in batches.
-4.  **Review Results**:
-    *   **Score (1-10)**: Higher is better. Focus on 8+.
-    *   **Solution Pitch**: Read the AI's proposed micro-SaaS idea.
-    *   **Deep Dive**: Expand a row to see the full original post and reasoning.
-5.  **Export**: Click "Download Research Data" to save your validated ideas.
+1. Enter subreddits to search (comma-separated)
+2. Add pain point keywords (e.g., "manual", "time-consuming")
+3. Set max posts limit
+4. Click "Start Hunting"
+5. Review AI-analyzed results
+6. Export to CSV for further study
 
-## 🧠 Key Features
-*   **Regex Pre-filter**: We only send "high signal" posts to the AI to save money.
-*   **Smart Caching**: Fetched posts and Analysis results are cached in the `cache/` folder. Re-running the same search is instant!
-*   **Structured AI**: Gemini returns a JSON with validation, scoring, and a specific solution pitch.
+## 🤝 Contributing
+
+This is an educational project. Contributions welcome for:
+- Improved pattern detection
+- Better sentiment analysis
+- Code optimization
+- Documentation
+
+## 📄 License
+
+MIT License - See LICENSE file for details
+
+## ⚠️ Disclaimer
+
+This tool is for educational and research purposes only. All data accessed is publicly available on Reddit. Users are responsible for complying with Reddit's API Terms of Service and using the tool ethically.
+
+## 🔗 Resources
+
+- [Reddit API Documentation](https://www.reddit.com/dev/api/)
+- [PRAW Documentation](https://praw.readthedocs.io/)
+- [Reddit's Responsible Builder Policy](https://www.redditinc.com/policies/data-api-terms)
