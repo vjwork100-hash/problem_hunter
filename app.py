@@ -150,11 +150,20 @@ def main():
             st.write(f"📊 Total posts collected: {len(all_posts)}")
             st.write(f"✅ Successful: {fetch_stats['successful_fetches']}/{fetch_stats['total_fetches']} sources")
             
-            # Show errors if any
+            # Show errors if any - ALWAYS EXPANDED if there are errors
             if errors:
-                with st.expander("⚠️ Fetch Errors", expanded=False):
+                with st.expander(f"⚠️ Fetch Errors ({len(errors)} sources failed)", expanded=True):
+                    st.warning("Some sources encountered errors. This is normal - the app continues with working sources.")
                     for source, error in errors.items():
                         st.error(f"**{source.upper()}**: {error}")
+                        
+                        # Provide helpful hints for common errors
+                        if "authentication" in error.lower() or "401" in error or "403" in error:
+                            st.info(f"💡 **{source}** needs API credentials. Add them to your `.env` file or disable this source.")
+                        elif "rate limit" in error.lower() or "429" in error:
+                            st.info(f"💡 **{source}** rate limit reached. Try again later or add API credentials for higher limits.")
+                        elif "timeout" in error.lower():
+                            st.info(f"💡 **{source}** timed out. The service might be slow - try again.")
             
             # Show fetch times
             if fetch_stats['fetch_times']:
@@ -162,13 +171,47 @@ def main():
                     for source, fetch_time in fetch_stats['fetch_times'].items():
                         st.write(f"**{source.upper()}**: {fetch_time:.2f}s")
             
+            # Enhanced empty results handling
             if not all_posts:
-                status.update(label="No relevant posts found.", state="error")
+                status.update(label="No posts found", state="error")
+                
+                st.error("### 🔍 No Posts Found")
+                st.write("**Possible reasons:**")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("""
+                    **Source Issues:**
+                    - All sources failed (check errors above)
+                    - Sources need API keys
+                    - Rate limits reached
+                    """)
+                
+                with col2:
+                    st.markdown("""
+                    **Search Issues:**
+                    - Keywords too specific
+                    - No recent posts matching keywords
+                    - Try broader terms like "manual", "tedious"
+                    """)
+                
+                st.info("""
+                **💡 Quick Fixes:**
+                1. Enable **Hacker News** + **Stack Overflow** (work without API keys)
+                2. Try keywords: `manual`, `tedious`, `hate`, `waste time`
+                3. Check the errors above for specific source issues
+                """)
                 return
             
             # Deduplicate posts
+            original_count = len(all_posts)
             all_posts = aggregator.deduplicate_posts(all_posts)
-            st.write(f"🔄 After deduplication: {len(all_posts)} unique posts")
+            duplicates_removed = original_count - len(all_posts)
+            
+            if duplicates_removed > 0:
+                st.write(f"🔄 After deduplication: {len(all_posts)} unique posts ({duplicates_removed} duplicates removed)")
+            else:
+                st.write(f"🔄 After deduplication: {len(all_posts)} unique posts")
             
             status.update(label="Scraping Complete!", state="complete", expanded=False)
 
@@ -178,14 +221,41 @@ def main():
         trend_analyzer = TrendAnalyzer(db)
         
         with st.spinner("🧠 AI Analyzer analyzing opportunities..."):
-            analyzed_posts = analyzer.analyze_posts(all_posts)
+            try:
+                analyzed_posts = analyzer.analyze_posts(all_posts)
+                
+                # Check for analysis failures
+                failed_analyses = sum(1 for p in analyzed_posts if not p.get('analysis') or not isinstance(p.get('analysis'), dict))
+                if failed_analyses > 0:
+                    st.warning(f"⚠️ {failed_analyses}/{len(analyzed_posts)} posts failed AI analysis. This might be due to API rate limits or malformed posts.")
+                
+            except Exception as e:
+                st.error(f"### ❌ AI Analysis Failed")
+                st.error(f"**Error:** {str(e)}")
+                st.info("""
+                **Common causes:**
+                - Invalid or missing Google Gemini API key
+                - API rate limit exceeded
+                - Network connectivity issues
+                
+                **Solutions:**
+                1. Check your `GOOGLE_API_KEY` in the sidebar
+                2. Verify the API key at https://ai.google.dev/
+                3. Wait a few minutes if rate limited
+                """)
+                return
             
             # Save to database and track trends
+            saved_count = 0
             for post in analyzed_posts:
-                db.save_post(post)
+                if db.save_post(post):
+                    saved_count += 1
                 if 'analysis' in post and isinstance(post['analysis'], dict):
                     db.save_analysis(post['id'], post['analysis'])
                     trend_analyzer.track_problem(post['id'], post['analysis'])
+            
+            if saved_count > 0:
+                st.success(f"💾 Saved {saved_count} posts to database")
 
         # 3. Display Results
         display_results(analyzed_posts, db, trend_analyzer)
@@ -239,7 +309,29 @@ def display_current_results(posts):
             })
 
     if not data:
-        st.info("No validated pain points found in this batch. Try broader keywords!")
+        st.info("### 🔍 No Validated Pain Points Found")
+        
+        # Show how many posts were analyzed
+        total_analyzed = len(posts)
+        st.write(f"**Analyzed {total_analyzed} posts, but none were identified as strong pain points.**")
+        
+        st.markdown("""
+        **This could mean:**
+        - The AI didn't find clear pain points in the posts
+        - Posts were too vague or not business-focused
+        - Keywords didn't match pain point discussions
+        
+        **💡 Try these improvements:**
+        1. **Better keywords**: Use `hate`, `manual`, `tedious`, `waste time`, `frustrated`
+        2. **Enable more sources**: Hacker News + Stack Overflow work great
+        3. **Lower filters**: Reduce min score to see marginal ideas
+        4. **Different subreddits**: Try r/SaaS, r/Entrepreneur, r/productivity
+        
+        **Debug Info:**
+        - Posts collected: {total_analyzed}
+        - Pain points found: 0
+        - Check the Analytics tab to see what was analyzed
+        """)
         return
 
     df = pd.DataFrame(data)
