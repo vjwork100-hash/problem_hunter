@@ -15,8 +15,8 @@ class Analyzer:
         self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
         if self.api_key:
             self.client = genai.Client(api_key=self.api_key)
-            # Use the correct model name for v1beta API
-            self.model = "models/gemini-1.5-flash-latest"
+            # Correct model name from API listing
+            self.model = "models/gemini-flash-latest"
         self.cache = Cache()
 
     def analyze_posts(self, posts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -204,7 +204,7 @@ class Analyzer:
         
         try:
             response = self.client.models.generate_content(
-                model='models/gemini-1.5-flash-latest',
+                model='models/gemini-flash-latest',  # Correct model name from API
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json"
