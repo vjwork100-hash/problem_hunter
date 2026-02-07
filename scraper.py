@@ -71,7 +71,7 @@ class RedditClient:
                     if cached_post:
                         all_posts.append(cached_post)
                         if len(all_posts) >= limit:
-                             break
+                            break
                         continue
 
                     # Text for filtering: Title + Selftext

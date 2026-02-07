@@ -45,6 +45,13 @@ class Analyzer:
             try:
                 batch_results = self._call_gemini_batch(batch)
                 
+                # Validate batch results length matches input
+                if len(batch_results) != len(batch):
+                    print(f"Warning: Expected {len(batch)} results, got {len(batch_results)}")
+                    # Pad with error objects if needed
+                    while len(batch_results) < len(batch):
+                        batch_results.append({"error": "Missing result from API", "is_pain_point": False, "score": 0})
+                
                 # Merge results back
                 for post, analysis in zip(batch, batch_results):
                     post['analysis'] = analysis

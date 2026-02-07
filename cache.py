@@ -1,6 +1,5 @@
 import json
 import os
-import hashlib
 from typing import Dict, Any, Optional
 
 CACHE_DIR = "cache"
