@@ -149,54 +149,33 @@ def main():
                 st.success("✅ Saved Product Hunt token to .env!")
                 st.rerun()
     
+    
     st.sidebar.divider()
-        
-        # Data Sources Section
+    
+    # Data Sources Section
     with st.sidebar.expander("📊 Data Sources", expanded=True):
-            st.markdown("**No Auth Required:**")
-            use_hackernews = st.checkbox("Hacker News", value=True, help="✅ No API key required!")
-            use_stackoverflow = st.checkbox("Stack Overflow", value=True, help="✅ No API key required!")
-            use_pushshift = st.checkbox("Reddit (Pushshift)", value=False, help="✅ No auth, temporary until official API")
-            
-            st.markdown("**Requires API Keys:**")
-            use_reddit = st.checkbox("Reddit (Official)", value=False, help="⚠️ Requires API credentials")
-            use_github = st.checkbox("GitHub Issues", value=False, help="⚙️ Optional token for higher limits")
-            use_producthunt = st.checkbox("Product Hunt", value=False, help="⚠️ Requires API token")
-            
-            st.markdown("**Experimental:**")
-            use_linkedin = st.checkbox("LinkedIn", value=False, help="⚠️ Experimental, may not work")
+        st.markdown("**No Auth Required:**")
+        use_hackernews = st.checkbox("Hacker News", value=True, help="✅ No API key required!")
+        use_stackoverflow = st.checkbox("Stack Overflow", value=True, help="✅ No API key required!")
+        use_pushshift = st.checkbox("Reddit (Pushshift)", value=False, help="✅ No auth, temporary until official API")
         
-        # API Keys Section
-        with st.expander("🔑 API Keys", expanded=False):
-            google_api_key = st.text_input("Gemini API Key", value=os.getenv("GOOGLE_API_KEY", ""), type="password")
-            
-            st.markdown("**Reddit Official:**")
-            reddit_client_id = st.text_input("Reddit Client ID", value=os.getenv("REDDIT_CLIENT_ID", ""), type="password")
-            reddit_client_secret = st.text_input("Reddit Client Secret", value=os.getenv("REDDIT_CLIENT_SECRET", ""), type="password")
-            
-            st.markdown("**GitHub (Optional):**")
-            github_token = st.text_input("GitHub Token", value=os.getenv("GITHUB_TOKEN", ""), type="password")
-            
-            st.markdown("**Product Hunt:**")
-            ph_token = st.text_input("Product Hunt Token", value=os.getenv("PRODUCTHUNT_TOKEN", ""), type="password")
-            
-            # Warnings
-            if not google_api_key:
-                st.warning("⚠️ Gemini API key required for analysis.")
-            if use_reddit and not (reddit_client_id and reddit_client_secret):
-                st.warning("⚠️ Reddit credentials required if Reddit is enabled.")
-            if use_producthunt and not ph_token:
-                st.warning("⚠️ Product Hunt token required if enabled.")
-
-        st.divider()
+        st.markdown("**Requires API Keys:**")
+        use_reddit = st.checkbox("Reddit (Official)", value=False, help="⚠️ Requires API credentials")
+        use_github = st.checkbox("GitHub Issues", value=False, help="⚙️ Optional token for higher limits")
+        use_producthunt = st.checkbox("Product Hunt", value=False, help="⚠️ Requires API token")
         
-        # Search Settings
-        st.subheader("Search Settings")
-        subreddits_input = st.text_input("Subreddits (comma separated)", "SaaS, Entrepreneur, smallbusiness, marketing")
-        keywords_input = st.text_input("Keywords (comma separated)", "hate, manual, tedious, struggle, painful")
-        max_posts = st.slider("Max Posts to Analyze", 10, 100, 20)
-        
-        run_search = st.button("🚀 Start Hunting", type="primary")
+        st.markdown("**Experimental:**")
+        use_linkedin = st.checkbox("LinkedIn", value=False, help="⚠️ Experimental, may not work")
+    
+    st.sidebar.divider()
+    
+    # Search Settings
+    st.sidebar.subheader("Search Settings")
+    subreddits_input = st.sidebar.text_input("Subreddits (comma separated)", "SaaS, Entrepreneur, smallbusiness, marketing")
+    keywords_input = st.sidebar.text_input("Keywords (comma separated)", "hate, manual, tedious, struggle, painful")
+    posts_per_source = st.sidebar.slider("Posts per Source", 10, 100, 20)
+    
+    run_search = st.sidebar.button("🚀 Start Hunting", type="primary")
 
     # --- Main Logic ---
     if run_search:
