@@ -4,6 +4,11 @@ import os
 from dotenv import load_dotenv
 from sources.reddit_source import RedditSource
 from sources.hackernews_source import HackerNewsSource
+from sources.stackoverflow_source import StackOverflowSource
+from sources.github_source import GitHubSource
+from sources.producthunt_source import ProductHuntSource
+from sources.reddit_pushshift import RedditPushshiftSource
+from sources.linkedin_source import LinkedInSource
 from analyzer import Analyzer
 
 # Page Config
@@ -26,19 +31,40 @@ def main():
         
         # Data Sources Section
         with st.expander("📊 Data Sources", expanded=True):
+            st.markdown("**No Auth Required:**")
             use_hackernews = st.checkbox("Hacker News", value=True, help="✅ No API key required!")
-            use_reddit = st.checkbox("Reddit", value=False, help="⚠️ Requires API credentials")
+            use_stackoverflow = st.checkbox("Stack Overflow", value=True, help="✅ No API key required!")
+            use_pushshift = st.checkbox("Reddit (Pushshift)", value=False, help="✅ No auth, temporary until official API")
+            
+            st.markdown("**Requires API Keys:**")
+            use_reddit = st.checkbox("Reddit (Official)", value=False, help="⚠️ Requires API credentials")
+            use_github = st.checkbox("GitHub Issues", value=False, help="⚙️ Optional token for higher limits")
+            use_producthunt = st.checkbox("Product Hunt", value=False, help="⚠️ Requires API token")
+            
+            st.markdown("**Experimental:**")
+            use_linkedin = st.checkbox("LinkedIn", value=False, help="⚠️ Experimental, may not work")
         
         # API Keys Section
         with st.expander("🔑 API Keys", expanded=False):
-            reddit_client_id = st.text_input("Reddit Client ID", value=os.getenv("REDDIT_CLIENT_ID", ""), type="password")
-            reddit_client_secret = st.text_input("Reddit Client Secret", value=os.getenv("REDDIT_CLIENT_SECRET", ""), type="password")
             google_api_key = st.text_input("Gemini API Key", value=os.getenv("GOOGLE_API_KEY", ""), type="password")
             
+            st.markdown("**Reddit Official:**")
+            reddit_client_id = st.text_input("Reddit Client ID", value=os.getenv("REDDIT_CLIENT_ID", ""), type="password")
+            reddit_client_secret = st.text_input("Reddit Client Secret", value=os.getenv("REDDIT_CLIENT_SECRET", ""), type="password")
+            
+            st.markdown("**GitHub (Optional):**")
+            github_token = st.text_input("GitHub Token", value=os.getenv("GITHUB_TOKEN", ""), type="password")
+            
+            st.markdown("**Product Hunt:**")
+            ph_token = st.text_input("Product Hunt Token", value=os.getenv("PRODUCTHUNT_TOKEN", ""), type="password")
+            
+            # Warnings
             if not google_api_key:
                 st.warning("⚠️ Gemini API key required for analysis.")
             if use_reddit and not (reddit_client_id and reddit_client_secret):
                 st.warning("⚠️ Reddit credentials required if Reddit is enabled.")
+            if use_producthunt and not ph_token:
+                st.warning("⚠️ Product Hunt token required if enabled.")
 
         st.divider()
         
@@ -56,17 +82,27 @@ def main():
             st.error("Please configure your Gemini API key in the sidebar or .env file.")
             return
         
-        if not use_hackernews and not use_reddit:
+        # Check if at least one source is enabled
+        enabled_sources = [use_hackernews, use_stackoverflow, use_pushshift, use_reddit, use_github, use_producthunt, use_linkedin]
+        if not any(enabled_sources):
             st.error("Please enable at least one data source.")
             return
         
+        # Validate credentials for sources that need them
         if use_reddit and not (reddit_client_id and reddit_client_secret):
-            st.error("Reddit is enabled but credentials are missing.")
+            st.error("Reddit (Official) is enabled but credentials are missing.")
+            return
+        if use_producthunt and not ph_token:
+            st.error("Product Hunt is enabled but token is missing.")
             return
 
         # Initialize sources
         clean_subreddits = [s.strip() for s in subreddits_input.split(',')]
         clean_keywords = [k.strip() for k in keywords_input.split(',')]
+        
+        # Calculate posts per source
+        num_sources = sum(enabled_sources)
+        posts_per_source = max(max_posts // num_sources, 5)
         
         all_posts = []
         
@@ -76,21 +112,71 @@ def main():
                 st.write("📰 Fetching from Hacker News...")
                 try:
                     hn_source = HackerNewsSource()
-                    hn_posts = hn_source.fetch_posts(clean_keywords, limit=max_posts//2 if use_reddit else max_posts)
+                    hn_posts = hn_source.fetch_posts(clean_keywords, limit=posts_per_source)
                     all_posts.extend(hn_posts)
                     st.write(f"✅ Found {len(hn_posts)} HN posts")
                 except Exception as e:
                     st.write(f"❌ HN Error: {e}")
             
+            if use_stackoverflow:
+                st.write("💻 Fetching from Stack Overflow...")
+                try:
+                    so_source = StackOverflowSource()
+                    so_posts = so_source.fetch_posts(clean_keywords, limit=posts_per_source)
+                    all_posts.extend(so_posts)
+                    st.write(f"✅ Found {len(so_posts)} SO posts")
+                except Exception as e:
+                    st.write(f"❌ SO Error: {e}")
+            
+            if use_pushshift:
+                st.write("🔄 Fetching from Reddit (Pushshift)...")
+                try:
+                    ps_source = RedditPushshiftSource()
+                    ps_posts = ps_source.fetch_posts(clean_keywords, limit=posts_per_source, subreddits=clean_subreddits)
+                    all_posts.extend(ps_posts)
+                    st.write(f"✅ Found {len(ps_posts)} Pushshift posts")
+                except Exception as e:
+                    st.write(f"❌ Pushshift Error: {e}")
+            
             if use_reddit:
-                st.write("🤖 Fetching from Reddit...")
+                st.write("🤖 Fetching from Reddit (Official)...")
                 try:
                     reddit_source = RedditSource(client_id=reddit_client_id, client_secret=reddit_client_secret)
-                    reddit_posts = reddit_source.fetch_posts(clean_keywords, limit=max_posts//2 if use_hackernews else max_posts, subreddits=clean_subreddits)
+                    reddit_posts = reddit_source.fetch_posts(clean_keywords, limit=posts_per_source, subreddits=clean_subreddits)
                     all_posts.extend(reddit_posts)
                     st.write(f"✅ Found {len(reddit_posts)} Reddit posts")
                 except Exception as e:
                     st.write(f"❌ Reddit Error: {e}")
+            
+            if use_github:
+                st.write("🐙 Fetching from GitHub Issues...")
+                try:
+                    gh_source = GitHubSource(token=github_token if github_token else None)
+                    gh_posts = gh_source.fetch_posts(clean_keywords, limit=posts_per_source)
+                    all_posts.extend(gh_posts)
+                    st.write(f"✅ Found {len(gh_posts)} GitHub issues")
+                except Exception as e:
+                    st.write(f"❌ GitHub Error: {e}")
+            
+            if use_producthunt:
+                st.write("🚀 Fetching from Product Hunt...")
+                try:
+                    ph_source = ProductHuntSource(token=ph_token)
+                    ph_posts = ph_source.fetch_posts(clean_keywords, limit=posts_per_source)
+                    all_posts.extend(ph_posts)
+                    st.write(f"✅ Found {len(ph_posts)} PH comments")
+                except Exception as e:
+                    st.write(f"❌ Product Hunt Error: {e}")
+            
+            if use_linkedin:
+                st.write("💼 Fetching from LinkedIn...")
+                try:
+                    li_source = LinkedInSource()
+                    li_posts = li_source.fetch_posts(clean_keywords, limit=posts_per_source)
+                    all_posts.extend(li_posts)
+                    st.write(f"✅ Found {len(li_posts)} LinkedIn posts")
+                except Exception as e:
+                    st.write(f"❌ LinkedIn Error: {e}")
             
             st.write(f"📊 Total posts collected: {len(all_posts)}")
             
