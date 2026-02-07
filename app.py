@@ -10,6 +10,8 @@ from sources.producthunt_source import ProductHuntSource
 from sources.reddit_pushshift import RedditPushshiftSource
 from sources.linkedin_source import LinkedInSource
 from analyzer import Analyzer
+from database import Database
+from trend_analyzer import TrendAnalyzer
 
 # Page Config
 st.set_page_config(
@@ -20,6 +22,11 @@ st.set_page_config(
 
 # Load Environment Variables
 load_dotenv()
+
+# Initialize database (singleton)
+@st.cache_resource
+def get_database():
+    return Database()
 
 def main():
     st.title("🎯 Problem Hunter: AI SaaS Opportunity Finder")
@@ -188,15 +195,39 @@ def main():
 
         # 2. Analysis Phase
         analyzer = Analyzer(api_key=google_api_key)
+        db = get_database()
+        trend_analyzer = TrendAnalyzer(db)
+        
         with st.spinner("🧠 AI Analyzer analyzing opportunities..."):
             analyzed_posts = analyzer.analyze_posts(all_posts)
+            
+            # Save to database and track trends
+            for post in analyzed_posts:
+                db.save_post(post)
+                if 'analysis' in post and isinstance(post['analysis'], dict):
+                    db.save_analysis(post['id'], post['analysis'])
+                    trend_analyzer.track_problem(post['id'], post['analysis'])
 
         # 3. Display Results
-        display_results(analyzed_posts)
+        display_results(analyzed_posts, db, trend_analyzer)
 
-def display_results(posts):
+def display_results(posts, db: Database, trend_analyzer: TrendAnalyzer):
     st.divider()
     
+    # Create tabs for Results and Trends
+    tab1, tab2, tab3 = st.tabs(["📊 Current Results", "📈 Trending Problems", "💾 Database Stats"])
+    
+    with tab1:
+        display_current_results(posts)
+    
+    with tab2:
+        display_trends(db, trend_analyzer)
+    
+    with tab3:
+        display_database_stats(db)
+
+def display_current_results(posts):
+    """Display current batch results."""
     # Process data for display
     data = []
     for p in posts:
@@ -313,6 +344,77 @@ def display_results(posts):
         "text/csv",
         key='download-csv'
     )
+
+def display_trends(db: Database, trend_analyzer: TrendAnalyzer):
+    """Display trending problems over time."""
+    st.subheader("📈 Trending Problems")
+    st.markdown("Problems appearing frequently across multiple scans")
+    
+    # Time range selector
+    col1, col2 = st.columns(2)
+    with col1:
+        days = st.selectbox("Time Range", [7, 14, 30, 90], index=1, key="trend_days")
+    with col2:
+        min_occurrences = st.slider("Min Occurrences", 2, 10, 3, key="min_occ")
+    
+    # Get emerging trends
+    st.markdown("### 🚀 Emerging Trends")
+    emerging = trend_analyzer.get_emerging_trends(days=days, min_recent=min_occurrences)
+    
+    if emerging:
+        for trend in emerging[:10]:  # Top 10
+            with st.expander(f"⭐ {trend['problem_summary'][:100]}... (Score: {trend['avg_score']:.1f})"):
+                col1, col2, col3, col4 = st.columns(4)
+                col1.metric("Occurrences", trend['occurrence_count'])
+                col2.metric("Avg Score", f"{trend['avg_score']:.1f}/10")
+                col3.metric("Recent Activity", trend.get('recent_count', 0))
+                col4.metric("Status", trend.get('status', 'unknown').upper())
+                
+                st.markdown(f"**Sources:** {trend.get('sources', 'N/A')}")
+                st.markdown(f"**First Seen:** {trend.get('first_seen', 'N/A')}")
+                st.markdown(f"**Last Seen:** {trend.get('last_seen', 'N/A')}")
+    else:
+        st.info("No emerging trends found. Run more scans to build trend data!")
+    
+    # Get declining trends
+    st.markdown("### 📉 Declining Trends")
+    declining = trend_analyzer.get_declining_trends(days=days)
+    
+    if declining:
+        for trend in declining[:5]:  # Top 5
+            with st.expander(f"📉 {trend['problem_summary'][:100]}..."):
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Total Occurrences", trend['occurrence_count'])
+                col2.metric("Past Activity", trend.get('past_count', 0))
+                col3.metric("Recent Activity", trend.get('recent_count', 0))
+                
+                st.markdown(f"**Sources:** {trend.get('sources', 'N/A')}")
+    else:
+        st.info("No declining trends detected.")
+
+def display_database_stats(db: Database):
+    """Display database statistics."""
+    st.subheader("💾 Database Statistics")
+    
+    stats = db.get_stats()
+    
+    # Overview metrics
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Total Posts", stats.get('total_posts', 0))
+    col2.metric("Total Analyses", stats.get('total_analyses', 0))
+    col3.metric("Pain Points Found", stats.get('pain_points_found', 0))
+    col4.metric("Avg Pain Score", stats.get('avg_pain_score', 0))
+    
+    # Posts by source
+    st.markdown("### Posts by Source")
+    if stats.get('posts_by_source'):
+        source_df = pd.DataFrame([
+            {"Source": k.upper(), "Count": v} 
+            for k, v in stats['posts_by_source'].items()
+        ])
+        st.bar_chart(source_df.set_index('Source'))
+    else:
+        st.info("No data yet. Run a scan to populate the database!")
 
 if __name__ == "__main__":
     main()
