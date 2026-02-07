@@ -51,17 +51,59 @@ class RedditSource(BaseSource):
             return False
         return any(p.search(text) for p in self.compiled_patterns)
 
-    def fetch_posts(self, keywords: List[str], limit: int = 50, subreddits: List[str] = None) -> List[Dict[str, Any]]:
-        """
-        Fetch posts from subreddits that match keywords and pain patterns.
-        
-        Args:
-            keywords: List of keywords to search for
-            limit: Maximum number of posts to return
-            subreddits: List of subreddit names (optional, defaults to common business subs)
-        """
-        if subreddits is None:
-            subreddits = ["Entrepreneur", "smallbusiness", "SaaS", "startups"]
+    def fetch_posts(self, keywords: List[str], limit: int = 50) -> List[Dict[str, Any]]:
+        """Fetch posts from multiple subreddits based on keywords."""
+        # Expanded list of high-signal subreddits for pain point discovery
+        subreddits = [
+            # Entrepreneurship & Business
+            "Entrepreneur",
+            "smallbusiness", 
+            "startups",
+            "SideProject",
+            "EntrepreneurRideAlong",
+            
+            # SaaS & Tech
+            "SaaS",
+            "microsaas",
+            "indiehackers",
+            "webdev",
+            "programming",
+            
+            # Productivity & Tools
+            "productivity",
+            "selfimprovement",
+            "GetMotivated",
+            "LifeProTips",
+            
+            # Freelancing & Remote Work
+            "freelance",
+            "digitalnomad",
+            "remotework",
+            "WorkOnline",
+            
+            # Finance & Accounting
+            "Accounting",
+            "Bookkeeping",
+            "personalfinance",
+            "smallbusinessfinance",
+            
+            # Marketing & Sales
+            "marketing",
+            "sales",
+            "SEO",
+            "socialmedia",
+            
+            # Design & Creative
+            "graphic_design",
+            "UI_Design",
+            "UXDesign",
+            
+            # Industry-Specific
+            "realestate",
+            "ecommerce",
+            "Shopify",
+            "AmazonFBA"
+        ]
         
         all_posts = []
         # Combine keywords for search query, or use a general query if no keywords
