@@ -8,11 +8,15 @@ from dotenv import load_dotenv
 from cache import Cache
 
 class Analyzer:
+    """AI-powered analyzer using Google Gemini."""
+    
     def __init__(self, api_key: str = None):
         load_dotenv()
         self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
         if self.api_key:
             self.client = genai.Client(api_key=self.api_key)
+            # Use the correct model name for v1beta API
+            self.model = "models/gemini-1.5-flash-latest"
         self.cache = Cache()
 
     def analyze_posts(self, posts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

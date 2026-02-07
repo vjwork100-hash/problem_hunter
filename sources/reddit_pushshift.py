@@ -41,37 +41,56 @@ class RedditPushshiftSource(BaseSource):
             return False
         return any(p.search(text) for p in self.compiled_patterns)
     
-    def fetch_posts(self, keywords: List[str], limit: int = 50, subreddits: List[str] = None) -> List[Dict[str, Any]]:
+    def fetch_posts(self, keywords: List[str], limit: int = 50) -> List[Dict[str, Any]]:
         """
-        Fetch posts from Reddit via Pushshift.
+        Fetch posts from Pushshift API.
         
-        Args:
-            keywords: List of keywords to search for
-            limit: Maximum number of posts to return
-            subreddits: List of subreddit names (optional)
+        NOTE: As of 2024, Pushshift API has been restricted and returns 403 Forbidden.
+        This source is kept for reference but will not work without proper authentication.
         """
-        if subreddits is None:
-            subreddits = ["Entrepreneur", "smallbusiness", "SaaS", "startups"]
+        # Pushshift is currently returning 403 Forbidden - service has been restricted
+        print("⚠️ Pushshift API is currently unavailable (403 Forbidden).")
+        print("   The Pushshift service has been restricted. Use Reddit Official API instead.")
+        return []
         
+        # Original implementation kept for reference:
+        """
         all_posts = []
-        query = " OR ".join(keywords) if keywords else "pain OR problem OR solution"
+        subreddits = ["Entrepreneur", "smallbusiness", "SaaS", "startups"]
         
         for subreddit in subreddits:
             try:
-                posts = self._search_subreddit(subreddit, query, limit_per_sub=limit//len(subreddits))
-                all_posts.extend(posts)
+                # Build query
+                query = " OR ".join(keywords) if keywords else "problem OR pain"
                 
-                # Respect rate limits
-                time.sleep(1)
+                params = {
+                    "subreddit": subreddit,
+                    "q": query,
+                    "size": min(limit, 100),
+                    "sort": "desc",
+                    "sort_type": "created_utc",
+                    "selftext:not": "[deleted]"
+                }
                 
-                if len(all_posts) >= limit:
-                    break
+                response = requests.get(self.base_url, params=params, timeout=10)
+                response.raise_for_status()
+                
+                data = response.json()
+                posts = data.get('data', [])
+                
+                for post in posts:
+                    normalized = self.normalize_data(post)
+                    all_posts.append(normalized)
                     
+                    if len(all_posts) >= limit:
+                        break
+                        
             except Exception as e:
                 print(f"Error fetching from r/{subreddit} via Pushshift: {e}")
                 continue
         
         return all_posts[:limit]
+        """
     
     def _search_subreddit(self, subreddit: str, query: str, limit_per_sub: int = 25) -> List[Dict[str, Any]]:
         """Search a subreddit using Pushshift."""
