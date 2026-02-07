@@ -12,6 +12,7 @@ from sources.linkedin_source import LinkedInSource
 from analyzer import Analyzer
 from database import Database
 from trend_analyzer import TrendAnalyzer
+from aggregator import Aggregator
 
 # Page Config
 st.set_page_config(
@@ -111,85 +112,63 @@ def main():
         num_sources = sum(enabled_sources)
         posts_per_source = max(max_posts // num_sources, 5)
         
-        all_posts = []
-        
-        # 1. Scraping Phase
-        with st.status("🔍 Scanning platforms...", expanded=True) as status:
+        # 1. Scraping Phase (Parallel with Aggregator)
+        with st.status("🔍 Scanning platforms in parallel...", expanded=True) as status:
+            # Prepare sources for aggregator
+            sources_to_fetch = []
+            
             if use_hackernews:
-                st.write("📰 Fetching from Hacker News...")
-                try:
-                    hn_source = HackerNewsSource()
-                    hn_posts = hn_source.fetch_posts(clean_keywords, limit=posts_per_source)
-                    all_posts.extend(hn_posts)
-                    st.write(f"✅ Found {len(hn_posts)} HN posts")
-                except Exception as e:
-                    st.write(f"❌ HN Error: {e}")
+                sources_to_fetch.append(("hackernews", HackerNewsSource()))
             
             if use_stackoverflow:
-                st.write("💻 Fetching from Stack Overflow...")
-                try:
-                    so_source = StackOverflowSource()
-                    so_posts = so_source.fetch_posts(clean_keywords, limit=posts_per_source)
-                    all_posts.extend(so_posts)
-                    st.write(f"✅ Found {len(so_posts)} SO posts")
-                except Exception as e:
-                    st.write(f"❌ SO Error: {e}")
+                sources_to_fetch.append(("stackoverflow", StackOverflowSource()))
             
             if use_pushshift:
-                st.write("🔄 Fetching from Reddit (Pushshift)...")
-                try:
-                    ps_source = RedditPushshiftSource()
-                    ps_posts = ps_source.fetch_posts(clean_keywords, limit=posts_per_source, subreddits=clean_subreddits)
-                    all_posts.extend(ps_posts)
-                    st.write(f"✅ Found {len(ps_posts)} Pushshift posts")
-                except Exception as e:
-                    st.write(f"❌ Pushshift Error: {e}")
+                sources_to_fetch.append(("pushshift", RedditPushshiftSource()))
             
             if use_reddit:
-                st.write("🤖 Fetching from Reddit (Official)...")
-                try:
-                    reddit_source = RedditSource(client_id=reddit_client_id, client_secret=reddit_client_secret)
-                    reddit_posts = reddit_source.fetch_posts(clean_keywords, limit=posts_per_source, subreddits=clean_subreddits)
-                    all_posts.extend(reddit_posts)
-                    st.write(f"✅ Found {len(reddit_posts)} Reddit posts")
-                except Exception as e:
-                    st.write(f"❌ Reddit Error: {e}")
+                sources_to_fetch.append(("reddit", RedditSource(client_id=reddit_client_id, client_secret=reddit_client_secret)))
             
             if use_github:
-                st.write("🐙 Fetching from GitHub Issues...")
-                try:
-                    gh_source = GitHubSource(token=github_token if github_token else None)
-                    gh_posts = gh_source.fetch_posts(clean_keywords, limit=posts_per_source)
-                    all_posts.extend(gh_posts)
-                    st.write(f"✅ Found {len(gh_posts)} GitHub issues")
-                except Exception as e:
-                    st.write(f"❌ GitHub Error: {e}")
+                sources_to_fetch.append(("github", GitHubSource(token=github_token if github_token else None)))
             
             if use_producthunt:
-                st.write("🚀 Fetching from Product Hunt...")
-                try:
-                    ph_source = ProductHuntSource(token=ph_token)
-                    ph_posts = ph_source.fetch_posts(clean_keywords, limit=posts_per_source)
-                    all_posts.extend(ph_posts)
-                    st.write(f"✅ Found {len(ph_posts)} PH comments")
-                except Exception as e:
-                    st.write(f"❌ Product Hunt Error: {e}")
+                sources_to_fetch.append(("producthunt", ProductHuntSource(token=ph_token)))
             
             if use_linkedin:
-                st.write("💼 Fetching from LinkedIn...")
-                try:
-                    li_source = LinkedInSource()
-                    li_posts = li_source.fetch_posts(clean_keywords, limit=posts_per_source)
-                    all_posts.extend(li_posts)
-                    st.write(f"✅ Found {len(li_posts)} LinkedIn posts")
-                except Exception as e:
-                    st.write(f"❌ LinkedIn Error: {e}")
+                sources_to_fetch.append(("linkedin", LinkedInSource()))
             
+            # Use aggregator for parallel fetching
+            aggregator = Aggregator(max_workers=min(len(sources_to_fetch), 5))
+            result = aggregator.fetch_from_sources(sources_to_fetch, clean_keywords, posts_per_source)
+            
+            all_posts = result['posts']
+            errors = result['errors']
+            fetch_stats = result['stats']
+            
+            # Display results
             st.write(f"📊 Total posts collected: {len(all_posts)}")
+            st.write(f"✅ Successful: {fetch_stats['successful_fetches']}/{fetch_stats['total_fetches']} sources")
+            
+            # Show errors if any
+            if errors:
+                with st.expander("⚠️ Fetch Errors", expanded=False):
+                    for source, error in errors.items():
+                        st.error(f"**{source.upper()}**: {error}")
+            
+            # Show fetch times
+            if fetch_stats['fetch_times']:
+                with st.expander("⏱️ Fetch Performance", expanded=False):
+                    for source, fetch_time in fetch_stats['fetch_times'].items():
+                        st.write(f"**{source.upper()}**: {fetch_time:.2f}s")
             
             if not all_posts:
                 status.update(label="No relevant posts found.", state="error")
                 return
+            
+            # Deduplicate posts
+            all_posts = aggregator.deduplicate_posts(all_posts)
+            st.write(f"🔄 After deduplication: {len(all_posts)} unique posts")
             
             status.update(label="Scraping Complete!", state="complete", expanded=False)
 
