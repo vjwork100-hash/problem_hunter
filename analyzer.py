@@ -64,8 +64,8 @@ class Analyzer:
                         self.cache.save_analysis(post['id'], analysis)
                     analyzed_posts.append(post)
                 
-                # Simple rate limit prevention
-                time.sleep(1) 
+                # Rate limit prevention - increased to avoid quota exhaustion
+                time.sleep(2)  # 2 seconds between batches
                 
             except Exception as e:
                 print(f"Batch analysis failed: {e}")
