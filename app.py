@@ -193,8 +193,8 @@ def main():
 def display_results(posts, db: Database, trend_analyzer: TrendAnalyzer):
     st.divider()
     
-    # Create tabs for Results and Trends
-    tab1, tab2, tab3 = st.tabs(["📊 Current Results", "📈 Trending Problems", "💾 Database Stats"])
+    # Create tabs for Results, Trends, Stats, and Analytics
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 Current Results", "📈 Trending Problems", "💾 Database Stats", "📉 Analytics"])
     
     with tab1:
         display_current_results(posts)
@@ -204,9 +204,12 @@ def display_results(posts, db: Database, trend_analyzer: TrendAnalyzer):
     
     with tab3:
         display_database_stats(db)
+    
+    with tab4:
+        display_analytics(posts)
 
 def display_current_results(posts):
-    """Display current batch results."""
+    """Display current batch results with filters."""
     # Process data for display
     data = []
     for p in posts:
@@ -240,21 +243,50 @@ def display_current_results(posts):
         return
 
     df = pd.DataFrame(data)
-    df = df.sort_values(by="Score", ascending=False)
+    
+    # Filters Section
+    st.subheader("🔍 Filters")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        min_score = st.slider("Min Score", 0, 10, 0, key="filter_min_score")
+    
+    with col2:
+        market_sizes = ['All'] + list(df['Market Size'].unique())
+        selected_market = st.selectbox("Market Size", market_sizes, key="filter_market")
+    
+    with col3:
+        sources = ['All'] + list(df['Source'].unique())
+        selected_source = st.selectbox("Source", sources, key="filter_source")
+    
+    # Apply filters
+    filtered_df = df[df['Score'] >= min_score]
+    
+    if selected_market != 'All':
+        filtered_df = filtered_df[filtered_df['Market Size'] == selected_market]
+    
+    if selected_source != 'All':
+        filtered_df = filtered_df[filtered_df['Source'] == selected_source]
+    
+    filtered_df = filtered_df.sort_values(by="Score", ascending=False)
+    
+    if len(filtered_df) == 0:
+        st.warning("No results match your filters. Try adjusting them.")
+        return
 
     # Metrics
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total Scanned", len(posts))
     col2.metric("Validated Ideas", len(df))
-    col3.metric("Top Score", df['Score'].max())
-    col4.metric("Avg Difficulty", f"{df['Difficulty'].mean():.1f}/10")
+    col3.metric("After Filters", len(filtered_df))
+    col4.metric("Avg Difficulty", f"{filtered_df['Difficulty'].mean():.1f}/10")
 
     # Main Table
     st.subheader("🏆 Top Opportunities")
     
     # Enhanced table with new fields
     st.dataframe(
-        df[['Score', 'Trend', 'Title', 'Market Size', 'Difficulty', 'Time to Build', 'Source']],
+        filtered_df[['Score', 'Trend', 'Title', 'Market Size', 'Difficulty', 'Time to Build', 'Source']],
         column_config={
             "Score": st.column_config.ProgressColumn(
                 "Viability",
@@ -283,7 +315,7 @@ def display_current_results(posts):
 
     # Detailed Cards
     st.subheader("📝 Detailed Analysis")
-    for _, row in df.iterrows():
+    for _, row in filtered_df.iterrows():
         # Color code by score
         if row['Score'] >= 8:
             emoji = "🔥"
@@ -315,7 +347,7 @@ def display_current_results(posts):
                 st.json(row['Raw Data']['analysis'])
 
     # Export
-    csv = df.to_csv(index=False).encode('utf-8')
+    csv = filtered_df.to_csv(index=False).encode('utf-8')
     st.download_button(
         "📥 Download Research Data (CSV)",
         csv,
@@ -394,6 +426,117 @@ def display_database_stats(db: Database):
         st.bar_chart(source_df.set_index('Source'))
     else:
         st.info("No data yet. Run a scan to populate the database!")
+
+def display_analytics(posts):
+    """Display analytics dashboard with visualizations."""
+    st.subheader("📉 Analytics Dashboard")
+    
+    # Process data
+    data = []
+    for p in posts:
+        analysis = p.get('analysis', {})
+        if not isinstance(analysis, dict):
+            continue
+        
+        is_pain = analysis.get('is_pain_point', False)
+        if is_pain:
+            data.append({
+                "Score": analysis.get('score', 0),
+                "Trend": analysis.get('trend_score', 0),
+                "Market Size": analysis.get('market_size', 'unknown'),
+                "Difficulty": analysis.get('difficulty', 0),
+                "Source": p.get('source', 'unknown'),
+                "Title": p['title']
+            })
+    
+    if not data:
+        st.info("No data to visualize. Run a scan first!")
+        return
+    
+    df = pd.DataFrame(data)
+    
+    # Row 1: Market Size Distribution & Difficulty vs Opportunity
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### 📊 Market Size Distribution")
+        market_counts = df['Market Size'].value_counts()
+        
+        # Create pie chart data
+        pie_data = pd.DataFrame({
+            'Market Size': market_counts.index,
+            'Count': market_counts.values
+        })
+        
+        # Display as bar chart (Streamlit native)
+        st.bar_chart(pie_data.set_index('Market Size'))
+        
+        # Show percentages
+        total = len(df)
+        for market, count in market_counts.items():
+            pct = (count / total) * 100
+            st.write(f"**{market.title()}**: {count} ({pct:.1f}%)")
+    
+    with col2:
+        st.markdown("### 🎯 Difficulty vs Opportunity Matrix")
+        st.markdown("*Higher score + lower difficulty = better opportunity*")
+        
+        # Create scatter plot data
+        scatter_df = df[['Difficulty', 'Score', 'Title']].copy()
+        scatter_df['Opportunity Score'] = scatter_df['Score'] - (scatter_df['Difficulty'] * 0.5)
+        
+        # Color code by opportunity score
+        scatter_df['Color'] = scatter_df['Opportunity Score'].apply(
+            lambda x: '🔥 High' if x >= 7 else ('⭐ Medium' if x >= 5 else '💡 Low')
+        )
+        
+        # Display top opportunities
+        top_opps = scatter_df.nlargest(5, 'Opportunity Score')
+        st.markdown("**Top 5 Opportunities (High Score, Low Difficulty):**")
+        for idx, row in top_opps.iterrows():
+            st.write(f"{row['Color']}: **{row['Title'][:60]}...** (Score: {row['Score']}, Diff: {row['Difficulty']})")
+    
+    # Row 2: Source Breakdown
+    st.markdown("### 📱 Results by Source")
+    
+    # Create tabs for each source
+    sources = df['Source'].unique()
+    source_tabs = st.tabs([s.upper() for s in sources])
+    
+    for idx, source in enumerate(sources):
+        with source_tabs[idx]:
+            source_df = df[df['Source'] == source]
+            
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Total", len(source_df))
+            col2.metric("Avg Score", f"{source_df['Score'].mean():.1f}")
+            col3.metric("Avg Difficulty", f"{source_df['Difficulty'].mean():.1f}")
+            
+            # Top 3 from this source
+            st.markdown("**Top 3 Problems:**")
+            top_3 = source_df.nlargest(3, 'Score')
+            for _, row in top_3.iterrows():
+                st.write(f"⭐ **[{row['Score']}/10]** {row['Title'][:80]}...")
+    
+    # Row 3: Score Distribution
+    st.markdown("### 📈 Score Distribution")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Score histogram
+        score_counts = df['Score'].value_counts().sort_index()
+        st.bar_chart(score_counts)
+    
+    with col2:
+        # Statistics
+        st.markdown("**Statistics:**")
+        st.write(f"- **Mean Score**: {df['Score'].mean():.2f}")
+        st.write(f"- **Median Score**: {df['Score'].median():.0f}")
+        st.write(f"- **Std Dev**: {df['Score'].std():.2f}")
+        st.write(f"- **High Scores (8+)**: {len(df[df['Score'] >= 8])}")
+        st.write(f"- **Medium Scores (6-7)**: {len(df[(df['Score'] >= 6) & (df['Score'] < 8)])}")
+        st.write(f"- **Low Scores (<6)**: {len(df[df['Score'] < 6])}")
 
 if __name__ == "__main__":
     main()
