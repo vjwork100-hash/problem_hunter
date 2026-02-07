@@ -4,8 +4,11 @@ import re
 from typing import List, Dict, Any
 from dotenv import load_dotenv
 from cache import Cache
+from sources.base_source import BaseSource
 
-class RedditClient:
+class RedditSource(BaseSource):
+    """Reddit data source using PRAW."""
+    
     def __init__(self, client_id: str = None, client_secret: str = None, user_agent: str = None):
         load_dotenv()
         self.reddit = praw.Reddit(
@@ -39,16 +42,27 @@ class RedditClient:
         ]
         self.compiled_patterns = [re.compile(p, re.IGNORECASE) for p in self.pain_patterns]
 
+    def get_source_name(self) -> str:
+        return "reddit"
+
     def _matches_patterns(self, text: str) -> bool:
         """Check if text matches any of the pain point patterns."""
         if not text:
             return False
         return any(p.search(text) for p in self.compiled_patterns)
 
-    def fetch_posts(self, subreddits: List[str], keywords: List[str], limit: int = 50) -> List[Dict[str, Any]]:
+    def fetch_posts(self, keywords: List[str], limit: int = 50, subreddits: List[str] = None) -> List[Dict[str, Any]]:
         """
         Fetch posts from subreddits that match keywords and pain patterns.
+        
+        Args:
+            keywords: List of keywords to search for
+            limit: Maximum number of posts to return
+            subreddits: List of subreddit names (optional, defaults to common business subs)
         """
+        if subreddits is None:
+            subreddits = ["Entrepreneur", "smallbusiness", "SaaS", "startups"]
+        
         all_posts = []
         # Combine keywords for search query, or use a general query if no keywords
         query = " OR ".join(keywords) if keywords else "pain OR problem OR solution"
@@ -80,10 +94,11 @@ class RedditClient:
                     # 1. Regex Pre-filter
                     if self._matches_patterns(content):
                         post_data = {
-                            "id": post.id,
+                            "id": f"reddit_{post.id}",
                             "title": post.title,
                             "text": post.selftext,
                             "url": post.url,
+                            "source": "reddit",
                             "subreddit": post.subreddit.display_name,
                             "created_utc": post.created_utc,
                             "score": post.score,

@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 import os
 from dotenv import load_dotenv
-from scraper import RedditClient
+from sources.reddit_source import RedditSource
+from sources.hackernews_source import HackerNewsSource
 from analyzer import Analyzer
 
 # Page Config
@@ -17,20 +18,27 @@ load_dotenv()
 
 def main():
     st.title("🎯 Problem Hunter: AI SaaS Opportunity Finder")
-    st.markdown("Scan Reddit for validated pain points and get instant micro-SaaS solutions.")
+    st.markdown("Scan multiple platforms for validated pain points and get instant micro-SaaS solutions.")
 
     # --- Sidebar Configuration ---
     with st.sidebar:
         st.header("Configuration")
         
+        # Data Sources Section
+        with st.expander("📊 Data Sources", expanded=True):
+            use_hackernews = st.checkbox("Hacker News", value=True, help="✅ No API key required!")
+            use_reddit = st.checkbox("Reddit", value=False, help="⚠️ Requires API credentials")
+        
         # API Keys Section
-        with st.expander("API Keys", expanded=False):
+        with st.expander("🔑 API Keys", expanded=False):
             reddit_client_id = st.text_input("Reddit Client ID", value=os.getenv("REDDIT_CLIENT_ID", ""), type="password")
             reddit_client_secret = st.text_input("Reddit Client Secret", value=os.getenv("REDDIT_CLIENT_SECRET", ""), type="password")
             google_api_key = st.text_input("Gemini API Key", value=os.getenv("GOOGLE_API_KEY", ""), type="password")
             
-            if not (reddit_client_id and reddit_client_secret and google_api_key):
-                st.warning("⚠️ Please provide all API keys to proceed.")
+            if not google_api_key:
+                st.warning("⚠️ Gemini API key required for analysis.")
+            if use_reddit and not (reddit_client_id and reddit_client_secret):
+                st.warning("⚠️ Reddit credentials required if Reddit is enabled.")
 
         st.divider()
         
@@ -44,32 +52,58 @@ def main():
 
     # --- Main Logic ---
     if run_search:
-        if not (reddit_client_id and reddit_client_secret and google_api_key):
-            st.error("Please configure your API keys in the sidebar or .env file.")
+        if not google_api_key:
+            st.error("Please configure your Gemini API key in the sidebar or .env file.")
+            return
+        
+        if not use_hackernews and not use_reddit:
+            st.error("Please enable at least one data source.")
+            return
+        
+        if use_reddit and not (reddit_client_id and reddit_client_secret):
+            st.error("Reddit is enabled but credentials are missing.")
             return
 
-        # Initialize Clients
+        # Initialize sources
         clean_subreddits = [s.strip() for s in subreddits_input.split(',')]
         clean_keywords = [k.strip() for k in keywords_input.split(',')]
         
-        client = RedditClient(client_id=reddit_client_id, client_secret=reddit_client_secret)
-        analyzer = Analyzer(api_key=google_api_key)
-
+        all_posts = []
+        
         # 1. Scraping Phase
-        with st.status("🔍 Scanning Reddit...", expanded=True) as status:
-            st.write(f"Searching in: {', '.join(clean_subreddits)}")
-            posts = client.fetch_posts(clean_subreddits, clean_keywords, limit=max_posts)
-            st.write(f"Found {len(posts)} posts matching pain patterns.")
+        with st.status("🔍 Scanning platforms...", expanded=True) as status:
+            if use_hackernews:
+                st.write("📰 Fetching from Hacker News...")
+                try:
+                    hn_source = HackerNewsSource()
+                    hn_posts = hn_source.fetch_posts(clean_keywords, limit=max_posts//2 if use_reddit else max_posts)
+                    all_posts.extend(hn_posts)
+                    st.write(f"✅ Found {len(hn_posts)} HN posts")
+                except Exception as e:
+                    st.write(f"❌ HN Error: {e}")
             
-            if not posts:
+            if use_reddit:
+                st.write("🤖 Fetching from Reddit...")
+                try:
+                    reddit_source = RedditSource(client_id=reddit_client_id, client_secret=reddit_client_secret)
+                    reddit_posts = reddit_source.fetch_posts(clean_keywords, limit=max_posts//2 if use_hackernews else max_posts, subreddits=clean_subreddits)
+                    all_posts.extend(reddit_posts)
+                    st.write(f"✅ Found {len(reddit_posts)} Reddit posts")
+                except Exception as e:
+                    st.write(f"❌ Reddit Error: {e}")
+            
+            st.write(f"📊 Total posts collected: {len(all_posts)}")
+            
+            if not all_posts:
                 status.update(label="No relevant posts found.", state="error")
                 return
             
             status.update(label="Scraping Complete!", state="complete", expanded=False)
 
         # 2. Analysis Phase
+        analyzer = Analyzer(api_key=google_api_key)
         with st.spinner("🧠 AI Analyzer analyzing opportunities..."):
-            analyzed_posts = analyzer.analyze_posts(posts)
+            analyzed_posts = analyzer.analyze_posts(all_posts)
 
         # 3. Display Results
         display_results(analyzed_posts)
