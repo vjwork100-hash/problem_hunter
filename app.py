@@ -203,7 +203,6 @@ def main():
         
         # Calculate posts per source
         num_sources = sum(enabled_sources)
-        posts_per_source = max(max_posts // num_sources, 5)
         
         # 1. Scraping Phase (Parallel with Aggregator)
         with st.status("🔍 Scanning platforms in parallel...", expanded=True) as status:
