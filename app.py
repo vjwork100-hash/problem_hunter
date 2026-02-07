@@ -212,11 +212,16 @@ def display_results(posts):
             data.append({
                 "Score": score,
                 "Title": p['title'],
-                "Subreddit": p['subreddit'],
+                "Source": p.get('source', 'unknown'),
                 "Solution Pitch": analysis.get('solution', 'N/A'),
                 "Reasoning": analysis.get('reasoning', 'N/A'),
+                "Trend": analysis.get('trend_score', 0),
+                "Market Size": analysis.get('market_size', 'unknown'),
+                "Competitors": analysis.get('competitors', 'unknown'),
+                "Difficulty": analysis.get('difficulty', 0),
+                "Time to Build": analysis.get('time_to_build', 'N/A'),
                 "Link": p['url'],
-                "Full Text": p['text'],
+                "Full Text": p.get('text', ''),
                 "Raw Data": p # Keep full object for details
             })
 
@@ -228,26 +233,40 @@ def display_results(posts):
     df = df.sort_values(by="Score", ascending=False)
 
     # Metrics
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total Scanned", len(posts))
     col2.metric("Validated Ideas", len(df))
-    col3.metric("Top Opportunity Score", df['Score'].max())
+    col3.metric("Top Score", df['Score'].max())
+    col4.metric("Avg Difficulty", f"{df['Difficulty'].mean():.1f}/10")
 
     # Main Table
     st.subheader("🏆 Top Opportunities")
     
-    # Simple table first
+    # Enhanced table with new fields
     st.dataframe(
-        df[['Score', 'Title', 'Solution Pitch', 'Subreddit']],
+        df[['Score', 'Trend', 'Title', 'Market Size', 'Difficulty', 'Time to Build', 'Source']],
         column_config={
             "Score": st.column_config.ProgressColumn(
-                "Viability Score",
+                "Viability",
                 help="AI Score 1-10",
                 format="%d",
                 min_value=0,
                 max_value=10,
             ),
-            "Link": st.column_config.LinkColumn("Source")
+            "Trend": st.column_config.ProgressColumn(
+                "Trend 📈",
+                help="How trending/emerging (1-10)",
+                format="%d",
+                min_value=0,
+                max_value=10,
+            ),
+            "Difficulty": st.column_config.ProgressColumn(
+                "Build Difficulty",
+                help="Technical complexity (1-10)",
+                format="%d",
+                min_value=0,
+                max_value=10,
+            ),
         },
         hide_index=True
     )
@@ -255,15 +274,34 @@ def display_results(posts):
     # Detailed Cards
     st.subheader("📝 Detailed Analysis")
     for _, row in df.iterrows():
-        with st.expander(f"[{row['Score']}/10] {row['Title']}"):
+        # Color code by score
+        if row['Score'] >= 8:
+            emoji = "🔥"
+        elif row['Score'] >= 6:
+            emoji = "⭐"
+        else:
+            emoji = "💡"
+            
+        with st.expander(f"{emoji} [{row['Score']}/10] {row['Title']}"):
+            # Top metrics row
+            metric_cols = st.columns(5)
+            metric_cols[0].metric("Trend Score", f"{row['Trend']}/10")
+            metric_cols[1].metric("Market Size", row['Market Size'].title())
+            metric_cols[2].metric("Difficulty", f"{row['Difficulty']}/10")
+            metric_cols[3].metric("Time to Build", row['Time to Build'])
+            metric_cols[4].metric("Source", row['Source'].upper())
+            
+            st.divider()
+            
             c1, c2 = st.columns([2, 1])
             with c1:
                 st.markdown(f"**💡 AI Solution:**\n> {row['Solution Pitch']}")
                 st.markdown(f"**🤔 Reasoning:** {row['Reasoning']}")
+                st.markdown(f"**🏢 Competitors:** {row['Competitors']}")
                 st.markdown("**Original Post:**")
                 st.info(row['Full Text'][:500] + "..." if len(row['Full Text']) > 500 else row['Full Text'])
             with c2:
-                st.link_button("View on Reddit", row['Link'])
+                st.link_button("🔗 View Source", row['Link'])
                 st.json(row['Raw Data']['analysis'])
 
     # Export

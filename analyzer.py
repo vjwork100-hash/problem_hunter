@@ -85,7 +85,7 @@ class Analyzer:
         joined_posts = "\n".join(posts_text)
 
         prompt = f"""
-        You are a SaaS Product Researcher analyzing Reddit posts for software business opportunities.
+        You are a SaaS Product Researcher analyzing posts for software business opportunities.
 
         CRITICAL RULES:
         - Only mark as pain point if it's a REPEATABLE WORKFLOW problem (not one-off complaints)
@@ -98,28 +98,104 @@ class Analyzer:
         - 4-6: Valid problem but niche/unclear market size
         - 1-3: Vague complaint, one-off issue, or already solved by existing tools
 
+        NEW ANALYSIS DIMENSIONS:
+        
+        1. TREND_SCORE (1-10): How trending/emerging is this problem?
+           - 9-10: New problem from recent tech/market shifts (AI, remote work, etc.)
+           - 7-8: Growing problem with increasing mentions
+           - 4-6: Established problem, steady mentions
+           - 1-3: Declining or solved problem
+        
+        2. MARKET_SIZE: Estimate potential market
+           - "large" (>$100M TAM): B2B, many industries, high frequency
+           - "medium" ($10M-$100M TAM): Specific vertical or workflow
+           - "small" (<$10M TAM): Very niche use case
+           - "unknown": Not enough context
+        
+        3. COMPETITORS: List 1-3 existing solutions (or "none" if truly novel)
+           - Be specific with product names if known
+           - Use "generic tools" if only partial solutions exist
+        
+        4. DIFFICULTY (1-10): Technical complexity to build MVP
+           - 1-3: Simple CRUD app, basic integrations
+           - 4-6: Moderate complexity, API integrations, some AI
+           - 7-10: Complex algorithms, real-time processing, heavy AI
+        
+        5. TIME_TO_BUILD: Estimated time for solo developer to MVP
+           - "1-2 weeks": Simple automation/integration
+           - "1-2 months": Standard SaaS with integrations
+           - "3-6 months": Complex features or multiple integrations
+           - "6+ months": Requires significant R&D or infrastructure
+
         GOOD EXAMPLES (Mark as pain points):
         Input: "I spend 4 hours every week manually entering Stripe payments into QuickBooks. Why isn't this automated?"
-        Output: {{"is_pain_point": true, "score": 9, "solution": "StripeSync: Auto-sync Stripe transactions to QuickBooks with AI-powered category detection", "reasoning": "High frequency (weekly), clear workflow pain, B2B context, measurable time cost"}}
+        Output: {{
+            "is_pain_point": true, 
+            "score": 9, 
+            "solution": "StripeSync: Auto-sync Stripe transactions to QuickBooks with AI-powered category detection", 
+            "reasoning": "High frequency (weekly), clear workflow pain, B2B context, measurable time cost",
+            "trend_score": 6,
+            "market_size": "medium",
+            "competitors": "Zapier, Automate.io",
+            "difficulty": 4,
+            "time_to_build": "1-2 months"
+        }}
 
         Input: "Scheduling Instagram posts for 5 clients is a nightmare. Switching between Buffer, Later, and native apps constantly."
-        Output: {{"is_pain_point": true, "score": 8, "solution": "ClientPostHub: Unified dashboard to schedule posts across all clients' social accounts with bulk import", "reasoning": "Multi-client workflow, integration pain, professional use case"}}
+        Output: {{
+            "is_pain_point": true, 
+            "score": 8, 
+            "solution": "ClientPostHub: Unified dashboard to schedule posts across all clients' social accounts with bulk import", 
+            "reasoning": "Multi-client workflow, integration pain, professional use case",
+            "trend_score": 7,
+            "market_size": "large",
+            "competitors": "Hootsuite, Sprout Social",
+            "difficulty": 6,
+            "time_to_build": "3-6 months"
+        }}
 
         BAD EXAMPLES (Not pain points):
         Input: "My accountant is so slow responding to emails ugh"
-        Output: {{"is_pain_point": false, "score": 2, "solution": "", "reasoning": "This is about service quality, not a workflow automation opportunity"}}
+        Output: {{
+            "is_pain_point": false, 
+            "score": 2, 
+            "solution": "", 
+            "reasoning": "This is about service quality, not a workflow automation opportunity",
+            "trend_score": 1,
+            "market_size": "unknown",
+            "competitors": "none",
+            "difficulty": 0,
+            "time_to_build": "N/A"
+        }}
 
         Input: "Taxes are so complicated and confusing"
-        Output: {{"is_pain_point": false, "score": 3, "solution": "", "reasoning": "Too vague, no specific workflow mentioned, likely needs professional help not software"}}
-
-        Input: "Just got scammed by a freelancer on Fiverr, be careful everyone"
-        Output: {{"is_pain_point": false, "score": 1, "solution": "", "reasoning": "One-off incident, seeking support not expressing workflow pain"}}
+        Output: {{
+            "is_pain_point": false, 
+            "score": 3, 
+            "solution": "", 
+            "reasoning": "Too vague, no specific workflow mentioned, likely needs professional help not software",
+            "trend_score": 2,
+            "market_size": "unknown",
+            "competitors": "TurboTax, H&R Block",
+            "difficulty": 0,
+            "time_to_build": "N/A"
+        }}
 
         Now analyze these posts:
         {joined_posts}
 
         Return ONLY a JSON array of objects, one per input post, in the same order.
-        Format: [{{"is_pain_point": bool, "score": int, "solution": str, "reasoning": str}}, ...]
+        Format: [{{
+            "is_pain_point": bool, 
+            "score": int, 
+            "solution": str, 
+            "reasoning": str,
+            "trend_score": int,
+            "market_size": str,
+            "competitors": str,
+            "difficulty": int,
+            "time_to_build": str
+        }}, ...]
         """
         
         try:
