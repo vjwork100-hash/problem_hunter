@@ -29,16 +29,130 @@ load_dotenv()
 def get_database():
     return Database()
 
-def main():
-    st.title("🎯 Problem Hunter: AI SaaS Opportunity Finder")
-    st.markdown("Scan multiple platforms for validated pain points and get instant micro-SaaS solutions.")
+def save_api_key_to_env(key_name: str, key_value: str):
+    """Save API key to .env file for persistence."""
+    import os
+    from pathlib import Path
+    
+    env_path = Path('.env')
+    
+    # Read existing .env content
+    existing_lines = []
+    if env_path.exists():
+        with open(env_path, 'r') as f:
+            existing_lines = f.readlines()
+    
+    # Update or add the key
+    key_found = False
+    updated_lines = []
+    for line in existing_lines:
+        if line.startswith(f"{key_name}="):
+            updated_lines.append(f"{key_name}={key_value}\n")
+            key_found = True
+        else:
+            updated_lines.append(line)
+    
+    # Add new key if not found
+    if not key_found:
+        updated_lines.append(f"{key_name}={key_value}\n")
+    
+    # Write back to .env
+    with open(env_path, 'w') as f:
+        f.writelines(updated_lines)
 
-    # --- Sidebar Configuration ---
-    with st.sidebar:
-        st.header("Configuration")
+def main():
+    st.title("🎯 Problem Hunter")
+    st.markdown("*AI-Powered Multi-Platform Opportunity Discovery Engine*")
+    
+    # Sidebar Configuration
+    st.sidebar.header("⚙️ Configuration")
+    
+    # API Keys Section
+    st.sidebar.subheader("🔑 API Keys")
+    
+    # Load from environment first
+    load_dotenv()
+    default_google_key = os.getenv("GOOGLE_API_KEY", "")
+    default_reddit_id = os.getenv("REDDIT_CLIENT_ID", "")
+    default_reddit_secret = os.getenv("REDDIT_CLIENT_SECRET", "")
+    default_github_token = os.getenv("GITHUB_TOKEN", "")
+    default_ph_token = os.getenv("PRODUCTHUNT_TOKEN", "")
+    
+    # Google Gemini API Key (Required)
+    google_api_key = st.sidebar.text_input(
+        "Google Gemini API Key (Required)",
+        value=default_google_key,
+        type="password",
+        help="Get from https://ai.google.dev/"
+    )
+    
+    # Save button for Google API key
+    if google_api_key and google_api_key != default_google_key:
+        if st.sidebar.button("💾 Save Google API Key"):
+            save_api_key_to_env("GOOGLE_API_KEY", google_api_key)
+            st.sidebar.success("✅ Saved to .env file!")
+            st.rerun()
+    
+    # Optional API Keys (Expandable)
+    with st.sidebar.expander("🔓 Optional API Keys", expanded=False):
+        st.markdown("*These are optional - some sources work without them!*")
+        
+        # Reddit
+        st.markdown("**Reddit Official API**")
+        reddit_client_id = st.text_input(
+            "Reddit Client ID",
+            value=default_reddit_id,
+            type="password"
+        )
+        reddit_client_secret = st.text_input(
+            "Reddit Client Secret",
+            value=default_reddit_secret,
+            type="password"
+        )
+        
+        if (reddit_client_id and reddit_client_id != default_reddit_id) or \
+           (reddit_client_secret and reddit_client_secret != default_reddit_secret):
+            if st.button("💾 Save Reddit Keys"):
+                if reddit_client_id:
+                    save_api_key_to_env("REDDIT_CLIENT_ID", reddit_client_id)
+                if reddit_client_secret:
+                    save_api_key_to_env("REDDIT_CLIENT_SECRET", reddit_client_secret)
+                st.success("✅ Saved Reddit keys to .env!")
+                st.rerun()
+        
+        # GitHub
+        st.markdown("**GitHub API**")
+        github_token = st.text_input(
+            "GitHub Token (Optional)",
+            value=default_github_token,
+            type="password",
+            help="For higher rate limits"
+        )
+        
+        if github_token and github_token != default_github_token:
+            if st.button("💾 Save GitHub Token"):
+                save_api_key_to_env("GITHUB_TOKEN", github_token)
+                st.success("✅ Saved GitHub token to .env!")
+                st.rerun()
+        
+        # Product Hunt
+        st.markdown("**Product Hunt API**")
+        ph_token = st.text_input(
+            "Product Hunt Token (Optional)",
+            value=default_ph_token,
+            type="password"
+        )
+        
+        if ph_token and ph_token != default_ph_token:
+            if st.button("💾 Save Product Hunt Token"):
+                save_api_key_to_env("PRODUCTHUNT_TOKEN", ph_token)
+                st.success("✅ Saved Product Hunt token to .env!")
+                st.rerun()
+    
+    st.sidebar.divider()
         
         # Data Sources Section
-        with st.expander("📊 Data Sources", expanded=True):
+    with st.sidebar.expander("📊 Data Sources", expanded=True):
             st.markdown("**No Auth Required:**")
             use_hackernews = st.checkbox("Hacker News", value=True, help="✅ No API key required!")
             use_stackoverflow = st.checkbox("Stack Overflow", value=True, help="✅ No API key required!")
