@@ -62,13 +62,617 @@ def save_api_key_to_env(key_name: str, key_value: str):
         f.writelines(updated_lines)
 
 def main():
-    st.title("🎯 Problem Hunter")
-    st.markdown("*AI-Powered Multi-Platform Opportunity Discovery Engine*")
+    # 🎨 RETRO-FUTURISTIC BRUTALIST DATA HUNTER DESIGN
+    st.markdown("""
+    <style>
+    /* Import bold, distinctive fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
+    
+    /* === CORE DESIGN SYSTEM === */
+    :root {
+        /* Retro-futuristic color palette */
+        --neon-green: #00ff41;
+        --neon-cyan: #00f0ff;
+        --neon-pink: #ff006e;
+        --terminal-bg: #0a0e27;
+        --terminal-dark: #050816;
+        --grid-color: rgba(0, 255, 65, 0.1);
+        --text-primary: #e0e0e0;
+        --text-secondary: #a0a0a0;
+    }
+    
+    /* Global reset and base */
+    * {
+        font-family: 'Space Grotesk', -apple-system, sans-serif;
+        letter-spacing: -0.02em;
+    }
+    
+    code, pre {
+        font-family: 'JetBrains Mono', monospace !important;
+    }
+    
+    /* === STREAMLIT HEADER/TOOLBAR FIX === */
+    header[data-testid="stHeader"] {
+        background-color: var(--terminal-dark) !important;
+        border-bottom: 2px solid var(--neon-green) !important;
+    }
+    
+    /* Hide Streamlit branding */
+    header[data-testid="stHeader"] > div:first-child {
+        background-color: var(--terminal-dark) !important;
+    }
+    
+    /* Style the toolbar buttons */
+    header[data-testid="stHeader"] button {
+        color: var(--neon-cyan) !important;
+        background-color: transparent !important;
+        border: 1px solid var(--neon-cyan) !important;
+        border-radius: 0 !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 0.75rem !important;
+        padding: 0.25rem 0.5rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+    }
+    
+    header[data-testid="stHeader"] button:hover {
+        background-color: var(--neon-cyan) !important;
+        color: var(--terminal-dark) !important;
+        box-shadow: 0 0 10px rgba(0, 240, 255, 0.5) !important;
+    }
+    
+    /* Style the menu icon */
+    header[data-testid="stHeader"] svg {
+        color: var(--neon-cyan) !important;
+    }
+    
+    /* === MENU POPUPS AND DROPDOWNS === */
+    /* Main menu popup */
+    [data-testid="stHeaderActionElements"] [data-baseweb="popover"] {
+        background-color: var(--terminal-dark) !important;
+        border: 2px solid var(--neon-cyan) !important;
+        border-radius: 0 !important;
+    }
+    
+    /* Menu items */
+    [data-testid="stHeaderActionElements"] [role="menuitem"],
+    [data-testid="stHeaderActionElements"] [role="option"] {
+        background-color: var(--terminal-dark) !important;
+        color: var(--neon-cyan) !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        border-radius: 0 !important;
+    }
+    
+    [data-testid="stHeaderActionElements"] [role="menuitem"]:hover,
+    [data-testid="stHeaderActionElements"] [role="option"]:hover {
+        background-color: var(--neon-cyan) !important;
+        color: var(--terminal-dark) !important;
+    }
+    
+    /* Dropdown menus (select boxes) */
+    [data-baseweb="popover"] {
+        background-color: var(--terminal-dark) !important;
+        border: 2px solid var(--neon-cyan) !important;
+        border-radius: 0 !important;
+    }
+    
+    [data-baseweb="menu"] {
+        background-color: var(--terminal-dark) !important;
+        border-radius: 0 !important;
+    }
+    
+    [data-baseweb="menu"] [role="option"] {
+        background-color: var(--terminal-dark) !important;
+        color: var(--neon-cyan) !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        border-radius: 0 !important;
+    }
+    
+    [data-baseweb="menu"] [role="option"]:hover {
+        background-color: var(--neon-cyan) !important;
+        color: var(--terminal-dark) !important;
+    }
+    
+    /* Selected option */
+    [data-baseweb="menu"] [aria-selected="true"] {
+        background-color: rgba(0, 255, 65, 0.2) !important;
+        color: var(--neon-green) !important;
+    }
+    
+    /* Expander dropdown content */
+    [data-testid="stExpander"] [data-baseweb="popover"] {
+        background-color: var(--terminal-dark) !important;
+        border: 2px solid var(--neon-cyan) !important;
+    }
+    
+    /* === UNIVERSAL MENU/DROPDOWN OVERRIDES === */
+    /* Target ALL emotion cache divs that might be menus/dropdowns */
+    div[class*="st-emotion-cache"] div[class*="st-emotion-cache"] {
+        background-color: var(--terminal-dark) !important;
+    }
+    
+    /* Target all list items */
+    ul[class*="st-emotion-cache"] li,
+    ul li[class*="st-emotion-cache"] {
+        background-color: var(--terminal-dark) !important;
+        color: var(--neon-cyan) !important;
+    }
+    
+    ul[class*="st-emotion-cache"] li:hover,
+    ul li[class*="st-emotion-cache"]:hover {
+        background-color: var(--neon-cyan) !important;
+        color: var(--terminal-dark) !important;
+    }
+    
+    /* Nuclear option - target ALL divs with role listbox/menu */
+    div[role="listbox"],
+    div[role="menu"] {
+        background-color: var(--terminal-dark) !important;
+        border: 2px solid var(--neon-cyan) !important;
+        border-radius: 0 !important;
+    }
+    
+    div[role="listbox"] > *,
+    div[role="menu"] > * {
+        background-color: var(--terminal-dark) !important;
+        color: var(--neon-cyan) !important;
+    }
+    
+    /* === TERMINAL GRID BACKGROUND === */
+    .stApp {
+        background-color: var(--terminal-bg);
+        background-image: 
+            linear-gradient(var(--grid-color) 1px, transparent 1px),
+            linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+        background-size: 50px 50px;
+        background-position: -1px -1px;
+        position: relative;
+    }
+    
+    .stApp::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at 50% 50%, transparent 0%, var(--terminal-dark) 100%);
+        pointer-events: none;
+        z-index: 0;
+    }
+    
+    /* Scanline effect overlay */
+    .stApp::after {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: repeating-linear-gradient(
+            0deg,
+            rgba(0, 255, 65, 0.03) 0px,
+            transparent 1px,
+            transparent 2px,
+            rgba(0, 255, 65, 0.03) 3px
+        );
+        pointer-events: none;
+        z-index: 1;
+        opacity: 0.5;
+    }
+    
+    /* === BRUTALIST HEADER === */
+    .main-header {
+        background: var(--terminal-dark);
+        border: 3px solid var(--neon-green);
+        border-radius: 0;
+        padding: 3rem 2rem;
+        margin-bottom: 3rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 
+            0 0 30px rgba(0, 255, 65, 0.3),
+            inset 0 0 50px rgba(0, 255, 65, 0.05);
+    }
+    
+    .main-header::before {
+        content: '[ SCAN MODE: ACTIVE ]';
+        position: absolute;
+        top: 10px;
+        right: 20px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.7rem;
+        color: var(--neon-green);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        opacity: 0.7;
+        animation: blink 2s infinite;
+        border: 1px solid var(--neon-green);
+        padding: 0.25rem 0.5rem;
+        box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+    }
+    
+    @keyframes blink {
+        0%, 50%, 100% { opacity: 0.7; }
+        25%, 75% { opacity: 0.3; }
+    }
+    
+    .main-header::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: linear-gradient(90deg, 
+            transparent 0%, 
+            var(--neon-cyan) 50%, 
+            transparent 100%);
+        animation: scan 3s linear infinite;
+    }
+    
+    @keyframes scan {
+        0% { transform: translateY(0); }
+        100% { transform: translateY(200px); }
+    }
+    
+    .main-header h1 {
+        color: var(--neon-green);
+        font-size: 4rem;
+        font-weight: 700;
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: -0.05em;
+        text-shadow: 
+            0 0 10px var(--neon-green),
+            0 0 20px var(--neon-green),
+            0 0 30px var(--neon-green);
+        line-height: 0.9;
+    }
+    
+    .main-header .subtitle {
+        color: var(--neon-cyan);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+        margin-top: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        opacity: 0.9;
+    }
+    
+    .main-header .glitch {
+        position: relative;
+        display: inline-block;
+    }
+    
+    /* === SIDEBAR TERMINAL STYLE === */
+    section[data-testid="stSidebar"] {
+        background: var(--terminal-dark) !important;
+        border-right: 3px solid var(--neon-green) !important;
+        box-shadow: inset 0 0 50px rgba(0, 255, 65, 0.1);
+    }
+    
+    section[data-testid="stSidebar"] > div {
+        background: transparent !important;
+    }
+    
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3 {
+        color: var(--neon-cyan) !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        font-size: 0.9rem !important;
+        border-bottom: 2px solid var(--neon-cyan);
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    /* === BRUTALIST BUTTONS === */
+    .stButton > button {
+        background: var(--terminal-dark);
+        color: var(--neon-green);
+        border: 3px solid var(--neon-green);
+        border-radius: 0;
+        padding: 1rem 2rem;
+        font-weight: 700;
+        font-size: 1rem;
+        transition: all 0.2s ease;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        font-family: 'JetBrains Mono', monospace;
+        box-shadow: 
+            0 0 20px rgba(0, 255, 65, 0.3),
+            inset 0 0 20px rgba(0, 255, 65, 0.05);
+    }
+    
+    .stButton > button:hover {
+        background: var(--neon-green);
+        color: var(--terminal-dark);
+        box-shadow: 
+            0 0 30px rgba(0, 255, 65, 0.6),
+            0 0 50px rgba(0, 255, 65, 0.4);
+        transform: translateY(-2px);
+    }
+    
+    /* === TERMINAL INPUT FIELDS === */
+    .stTextInput > div > div > input,
+    .stTextArea > div > div > textarea {
+        background: var(--terminal-dark);
+        border: 2px solid var(--neon-cyan);
+        border-radius: 0;
+        color: var(--neon-cyan);
+        padding: 0.75rem;
+        font-family: 'JetBrains Mono', monospace;
+        transition: all 0.3s ease;
+    }
+    
+    .stTextInput > div > div > input:focus,
+    .stTextArea > div > div > textarea:focus {
+        border-color: var(--neon-green);
+        box-shadow: 
+            0 0 20px rgba(0, 255, 65, 0.5),
+            inset 0 0 10px rgba(0, 255, 65, 0.1);
+        color: var(--neon-green);
+    }
+    
+    /* === CHECKBOX TERMINAL STYLE === */
+    .stCheckbox {
+        color: var(--text-primary) !important;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.85rem;
+    }
+    
+    .stCheckbox label {
+        color: var(--text-primary) !important;
+    }
+    
+    /* === SELECT BOXES === */
+    .stSelectbox > div > div {
+        background: var(--terminal-dark);
+        border: 2px solid var(--neon-cyan);
+        border-radius: 0;
+        color: var(--neon-cyan);
+        font-family: 'JetBrains Mono', monospace;
+    }
+    
+    /* Select box dropdown arrow */
+    .stSelectbox svg {
+        color: var(--neon-cyan) !important;
+    }
+    
+    /* Select box when open */
+    .stSelectbox [data-baseweb="select"] > div {
+        background-color: var(--terminal-dark) !important;
+        border-color: var(--neon-green) !important;
+    }
+    
+    /* === RADIO BUTTONS === */
+    .stRadio > div {
+        background: var(--terminal-dark);
+        border: 2px solid var(--neon-pink);
+        padding: 1rem;
+        border-radius: 0;
+    }
+    
+    .stRadio label {
+        color: var(--text-primary) !important;
+        font-family: 'JetBrains Mono', monospace;
+    }
+    
+    /* === DATA CARDS === */
+    .result-card {
+        background: var(--terminal-dark);
+        border: 2px solid var(--neon-cyan);
+        border-radius: 0;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        transition: all 0.3s ease;
+        position: relative;
+        box-shadow: 
+            0 0 20px rgba(0, 240, 255, 0.2),
+            inset 0 0 30px rgba(0, 240, 255, 0.05);
+        border-left: 4px solid var(--neon-cyan);
+    }
+    
+    .result-card:hover {
+        border-color: var(--neon-green);
+        border-left-color: var(--neon-green);
+        transform: translateX(5px);
+        box-shadow: 
+            0 0 30px rgba(0, 255, 65, 0.4),
+            inset 0 0 30px rgba(0, 255, 65, 0.1);
+    }
+    
+    .result-card::before {
+        content: '>';
+        position: absolute;
+        left: -15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--neon-green);
+        font-size: 2rem;
+        font-weight: 700;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .result-card:hover::before {
+        opacity: 1;
+    }
+    
+    /* === TYPOGRAPHY === */
+    h1, h2, h3 {
+        color: var(--neon-green) !important;
+        font-weight: 700 !important;
+        text-transform: uppercase;
+        letter-spacing: -0.02em;
+    }
+    
+    p, label, span, div {
+        color: var(--text-primary) !important;
+    }
+    
+    /* === METRICS WITH TERMINAL STYLE === */
+    [data-testid="stMetricValue"] {
+        color: var(--neon-green) !important;
+        font-size: 2.5rem !important;
+        font-weight: 700 !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        text-shadow: 0 0 20px rgba(0, 255, 65, 0.5);
+    }
+    
+    [data-testid="stMetricLabel"] {
+        color: var(--neon-cyan) !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    /* === ALERTS === */
+    .stAlert {
+        background: var(--terminal-dark);
+        border: 2px solid var(--neon-pink);
+        border-radius: 0;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .stSuccess {
+        border-color: var(--neon-green);
+        background: rgba(0, 255, 65, 0.1);
+    }
+    
+    .stError {
+        border-color: var(--neon-pink);
+        background: rgba(255, 0, 110, 0.1);
+    }
+    
+    /* === EXPANDERS === */
+    .streamlit-expanderHeader {
+        background: var(--terminal-dark);
+        border: 2px solid var(--neon-cyan);
+        border-radius: 0;
+        color: var(--neon-cyan) !important;
+        font-weight: 600;
+        font-family: 'JetBrains Mono', monospace;
+        text-transform: uppercase;
+    }
+    
+    /* === DATAFRAMES === */
+    .stDataFrame {
+        background: var(--terminal-dark);
+        border: 2px solid var(--neon-green);
+        border-radius: 0;
+    }
+    
+    /* === TABS === */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0;
+        background: var(--terminal-dark);
+        border: 2px solid var(--neon-cyan);
+        border-radius: 0;
+        padding: 0;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        background: transparent;
+        border-right: 2px solid var(--neon-cyan);
+        border-radius: 0;
+        color: var(--text-secondary);
+        font-weight: 600;
+        font-family: 'JetBrains Mono', monospace;
+        text-transform: uppercase;
+        padding: 1rem 2rem;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: var(--neon-green);
+        color: var(--terminal-dark);
+    }
+    
+    /* === DIVIDERS === */
+    hr {
+        border: none;
+        border-top: 2px solid var(--neon-cyan);
+        margin: 2rem 0;
+        opacity: 0.5;
+    }
+    
+    /* === TERMINAL SCROLLBAR === */
+    ::-webkit-scrollbar {
+        width: 12px;
+        height: 12px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: var(--terminal-dark);
+        border-left: 2px solid var(--neon-green);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: var(--neon-green);
+        border-radius: 0;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--neon-cyan);
+    }
+    
+    /* === LOADING SPINNER === */
+    .stSpinner > div {
+        border-top-color: var(--neon-green) !important;
+        border-right-color: var(--neon-cyan) !important;
+    }
+    
+    /* === ASYMMETRIC LAYOUT ACCENTS === */
+    .stApp > div:first-child {
+        position: relative;
+    }
+    
+    .stApp > div:first-child::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 200px;
+        height: 200px;
+        border-left: 3px solid var(--neon-pink);
+        border-bottom: 3px solid var(--neon-pink);
+        opacity: 0.3;
+        pointer-events: none;
+        z-index: 1000;
+    }
+    
+    .stApp > div:first-child::after {
+        content: '';
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 150px;
+        height: 150px;
+        border-right: 3px solid var(--neon-cyan);
+        border-top: 3px solid var(--neon-cyan);
+        opacity: 0.3;
+        pointer-events: none;
+        z-index: 1000;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # 🎯 BRUTALIST HEADER
+    st.markdown("""
+    <div class="main-header">
+        <h1><span class="glitch">⚡ PROBLEM HUNTER</span></h1>
+        <p class="subtitle">[ AI-POWERED SAAS OPPORTUNITY SCANNER ]</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Sidebar Configuration
     st.sidebar.header("⚙️ Configuration")
     
-    # API Keys Section
     st.sidebar.subheader("🔑 API Keys")
     
     # Load from environment first
