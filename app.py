@@ -3,6 +3,7 @@ import pandas as pd
 import os
 from dotenv import load_dotenv
 from sources.reddit_source import RedditSource
+from sources.reddit_rss_source import RedditRSSSource  # NEW: RSS fallback
 from sources.hackernews_source import HackerNewsSource
 from sources.stackoverflow_source import StackOverflowSource
 from sources.github_source import GitHubSource
@@ -159,6 +160,13 @@ def main():
         use_stackoverflow = st.checkbox("Stack Overflow", value=True, help="✅ No API key required!")
         use_pushshift = st.checkbox("Reddit (Pushshift)", value=False, help="✅ No auth, temporary until official API")
         
+        # Auto-detect Reddit API availability
+        has_reddit_api = bool(reddit_client_id and reddit_client_secret)
+        if not has_reddit_api:
+            use_reddit_rss = st.checkbox("Reddit (RSS - No API needed!)", value=True, help="✅ Works immediately without API keys")
+        else:
+            use_reddit_rss = False
+        
         st.markdown("**Requires API Keys:**")
         use_reddit = st.checkbox("Reddit (Official)", value=False, help="⚠️ Requires API credentials")
         use_github = st.checkbox("GitHub Issues", value=False, help="⚙️ Optional token for higher limits")
@@ -245,6 +253,10 @@ def main():
             
             if use_reddit:
                 sources_to_fetch.append(("reddit", RedditSource(client_id=reddit_client_id, client_secret=reddit_client_secret)))
+            
+            # NEW: RSS fallback
+            if 'use_reddit_rss' in locals() and use_reddit_rss:
+                sources_to_fetch.append(("reddit_rss", RedditRSSSource()))
             
             if use_github:
                 sources_to_fetch.append(("github", GitHubSource(token=github_token if github_token else None)))

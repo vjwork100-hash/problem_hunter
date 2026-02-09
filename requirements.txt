@@ -4,3 +4,4 @@ openai>=1.0.0
 pandas
 python-dotenv
 requests
+feedparser>=6.0.0

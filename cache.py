@@ -7,6 +7,10 @@ from datetime import datetime, timedelta
 CACHE_DIR = "cache"
 DEFAULT_TTL = 86400  # 24 hours in seconds
 
+# Specific TTLs for different cache types
+POSTS_TTL = 7 * 24 * 60 * 60  # 7 days in seconds
+ANALYSIS_TTL = 30 * 24 * 60 * 60  # 30 days in seconds
+
 class Cache:
     """
     Enhanced caching system with TTL, source-specific caching, and statistics.
@@ -83,7 +87,8 @@ class Cache:
         return None
 
     def save_post(self, post_id: str, post_data: Dict[str, Any], ttl: Optional[int] = None):
-        """Save a post to cache with TTL."""
+        """Save a post to cache with 7-day TTL by default."""
+        ttl = ttl or POSTS_TTL  # Use 7 days if not specified
         self.posts_cache[post_id] = self._create_cache_entry(post_data, ttl)
         self._save_cache(self.posts_cache_file, self.posts_cache)
         self.stats['saves'] += 1
@@ -105,7 +110,8 @@ class Cache:
         return None
 
     def save_analysis(self, post_id: str, analysis_data: Dict[str, Any], ttl: Optional[int] = None):
-        """Save analysis to cache with TTL."""
+        """Save analysis to cache with 30-day TTL by default."""
+        ttl = ttl or ANALYSIS_TTL  # Use 30 days if not specified
         self.analysis_cache[post_id] = self._create_cache_entry(analysis_data, ttl)
         self._save_cache(self.analysis_cache_file, self.analysis_cache)
         self.stats['saves'] += 1
