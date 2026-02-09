@@ -1,6 +1,6 @@
 praw
 streamlit
-google-genai
+openai>=1.0.0
 pandas
 python-dotenv
 requests

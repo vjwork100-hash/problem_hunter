@@ -31,15 +31,19 @@ class Aggregator:
         self,
         sources: List[tuple[str, BaseSource]],
         keywords: List[str],
-        limit_per_source: int = 50
+        limit_per_source: int = 50,
+        browse_mode: bool = False,
+        sort_by: str = 'hot'
     ) -> Dict[str, Any]:
         """
         Fetch posts from multiple sources in parallel.
         
         Args:
             sources: List of (source_name, source_instance) tuples
-            keywords: Keywords to search for
+            keywords: Keywords to search for (ignored if browse_mode=True)
             limit_per_source: Max posts per source
+            browse_mode: If True, browse top posts without keyword filtering
+            sort_by: Sort order - 'hot', 'new', or 'top'
             
         Returns:
             Dictionary with 'posts' (list) and 'errors' (dict)
@@ -55,7 +59,9 @@ class Aggregator:
                     source_name,
                     source_instance,
                     keywords,
-                    limit_per_source
+                    limit_per_source,
+                    browse_mode,
+                    sort_by
                 ): source_name
                 for source_name, source_instance in sources
             }
@@ -90,7 +96,9 @@ class Aggregator:
         source_name: str,
         source: BaseSource,
         keywords: List[str],
-        limit: int
+        limit: int,
+        browse_mode: bool = False,
+        sort_by: str = 'hot'
     ) -> Dict[str, Any]:
         """
         Fetch from a single source with error handling and timing.
@@ -101,7 +109,13 @@ class Aggregator:
         start_time = time.time()
         
         try:
-            posts = source.fetch_posts(keywords, limit=limit)
+            # Pass browse_mode and sort_by to source
+            posts = source.fetch_posts(
+                keywords=keywords, 
+                limit=limit,
+                browse_mode=browse_mode,
+                sort_by=sort_by
+            )
             fetch_time = time.time() - start_time
             
             # Validate posts
@@ -173,7 +187,7 @@ class Aggregator:
         
         Args:
             posts: List of posts
-            sort_by: Field to sort by (score, created_utc, num_comments)
+            sort_by: Field to sort by (score, created_utc, num_comments, pain_score)
             reverse: Sort descending if True
         """
         return sorted(

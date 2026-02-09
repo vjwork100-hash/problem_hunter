@@ -1,5 +1,4 @@
-from google import genai
-from google.genai import types
+from openai import OpenAI
 import os
 import json
 import time
@@ -12,11 +11,17 @@ class Analyzer:
     
     def __init__(self, api_key: str = None):
         load_dotenv()
-        self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
+        self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
         if self.api_key:
-            self.client = genai.Client(api_key=self.api_key)
-            # Correct model name from API listing
-            self.model = "models/gemini-flash-latest"
+            self.client = OpenAI(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=self.api_key,
+                default_headers={
+                    "HTTP-Referer": "https://github.com/vjwork100-hash/problem_hunter",
+                    "X-Title": "Problem Hunter"
+                }
+            )
+            self.model = "deepseek/deepseek-r1-0528:free"
         self.cache = Cache()
 
     def analyze_posts(self, posts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -25,7 +30,7 @@ class Analyzer:
         Returns the original posts with added 'analysis' field.
         """
         if not self.api_key:
-            return [{"error": "Missing Gemini API Key", **post} for post in posts]
+            return [{"error": "Missing OpenRouter API Key", **post} for post in posts]
 
         analyzed_posts = []
         posts_to_analyze = []
@@ -42,8 +47,8 @@ class Analyzer:
         if not posts_to_analyze:
             return analyzed_posts
 
-        # Process new posts in small batches to avoid huge prompts/timeouts
-        BATCH_SIZE = 5
+        # Process new posts in small batches to avoid token limits with DeepSeek R1's verbose thinking
+        BATCH_SIZE = 3  # Reduced from 5 to prevent incomplete JSON responses
         for i in range(0, len(posts_to_analyze), BATCH_SIZE):
             batch = posts_to_analyze[i:i+BATCH_SIZE]
             try:
@@ -203,16 +208,61 @@ class Analyzer:
         """
         
         try:
-            response = self.client.models.generate_content(
-                model='models/gemini-flash-latest',  # Correct model name from API
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json"
-                )
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are a concise SaaS analyst. Keep thinking brief. Focus on delivering complete, valid JSON."},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                max_tokens=4000  # Ensure enough tokens for complete response
             )
-            return json.loads(response.text)
+            
+            # Extract and clean the response
+            content = response.choices[0].message.content.strip()
+            
+            # Remove <think> tags if present (DeepSeek R1 specific)
+            if "<think>" in content and "</think>" in content:
+                think_end = content.find("</think>")
+                content = content[think_end + 8:].strip()
+            
+            # Remove markdown code blocks if present
+            if content.startswith("```"):
+                lines = content.split("\n")
+                # Skip first line (```) and last line if it's ```
+                if lines[-1].strip() == "```":
+                    lines = lines[1:-1]
+                else:
+                    lines = lines[1:]
+                # Skip language identifier if present
+                if lines and lines[0].strip() in ["json", "JSON"]:
+                    lines = lines[1:]
+                content = "\n".join(lines).strip()
+            
+            # Final validation
+            if not content or not (content.startswith("{") or content.startswith("[")):
+                print(f"WARNING: Invalid JSON structure. Response preview: {response.choices[0].message.content[:500]}")
+                return [{"error": "Invalid JSON structure", "is_pain_point": False, "score": 0} for _ in posts]
+            
+            # Parse JSON
+            result = json.loads(content)
+            
+            # Handle both array and single object responses
+            if isinstance(result, dict):
+                # If single object returned, wrap in array
+                return [result]
+            return result
+        except json.JSONDecodeError as e:
+            print(f"JSON Parse Error: {e}")
+            print(f"Response content (first 1000 chars): {response.choices[0].message.content[:1000]}")
+            print(f"Response content (last 500 chars): {response.choices[0].message.content[-500:]}")
+            # Check if response was cut off mid-JSON
+            if "<think>" in response.choices[0].message.content and not response.choices[0].message.content.strip().endswith(("}", "]")):
+                print("WARNING: Response appears to be incomplete (cut off mid-JSON). Try reducing batch size further.")
+            return [{"error": f"JSON parse error: {str(e)}", "is_pain_point": False, "score": 0} for _ in posts]
         except Exception as e:
-            print(f"Gemini API Error: {e}")
-            # Return error objects for the batch size
+            print(f"OpenRouter API Error: {e}")
+            if 'response' in locals():
+                print(f"Response: {response.choices[0].message.content[:500]}")
             return [{"error": str(e), "is_pain_point": False, "score": 0} for _ in posts]
 

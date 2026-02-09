@@ -72,24 +72,24 @@ def main():
     
     # Load from environment first
     load_dotenv()
-    default_google_key = os.getenv("GOOGLE_API_KEY", "")
+    default_openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
     default_reddit_id = os.getenv("REDDIT_CLIENT_ID", "")
     default_reddit_secret = os.getenv("REDDIT_CLIENT_SECRET", "")
     default_github_token = os.getenv("GITHUB_TOKEN", "")
     default_ph_token = os.getenv("PRODUCTHUNT_TOKEN", "")
     
-    # Google Gemini API Key (Required)
-    google_api_key = st.sidebar.text_input(
-        "Google Gemini API Key (Required)",
-        value=default_google_key,
+    # OpenRouter API Key (Required)
+    openrouter_api_key = st.sidebar.text_input(
+        "OpenRouter API Key (Required)",
+        value=default_openrouter_key,
         type="password",
-        help="Get from https://ai.google.dev/"
+        help="Get from https://openrouter.ai/settings/keys"
     )
     
-    # Save button for Google API key
-    if google_api_key and google_api_key != default_google_key:
-        if st.sidebar.button("💾 Save Google API Key"):
-            save_api_key_to_env("GOOGLE_API_KEY", google_api_key)
+    # Save button for OpenRouter API key
+    if openrouter_api_key and openrouter_api_key != default_openrouter_key:
+        if st.sidebar.button("💾 Save OpenRouter API Key"):
+            save_api_key_to_env("OPENROUTER_API_KEY", openrouter_api_key)
             st.sidebar.success("✅ Saved to .env file!")
             st.rerun()
     
@@ -171,16 +171,41 @@ def main():
     
     # Search Settings
     st.sidebar.subheader("Search Settings")
+    
+    # NEW: Search Mode Selection
+    search_mode = st.sidebar.radio(
+        "Search Mode",
+        ["Keyword Search", "Browse Top Posts"],
+        help="Keyword: Search for specific terms. Browse: Get top posts from each source"
+    )
+    browse_mode = (search_mode == "Browse Top Posts")
+    
+    # Only show keyword input if in keyword mode
+    if not browse_mode:
+        keywords_input = st.sidebar.text_input(
+            "Keywords (comma separated)", 
+            "hate, manual, tedious, struggle, painful, hours, looking for, can't"
+        )
+    else:
+        keywords_input = ""  # No keywords in browse mode
+        st.sidebar.info("📖 Browse mode: Fetching top posts without keyword filtering")
+    
+    # Sort order
+    sort_by = st.sidebar.selectbox(
+        "Sort By",
+        ["Hot", "New", "Top"],
+        help="How to sort posts from each source"
+    ).lower()
+    
     subreddits_input = st.sidebar.text_input("Subreddits (comma separated)", "SaaS, Entrepreneur, smallbusiness, marketing")
-    keywords_input = st.sidebar.text_input("Keywords (comma separated)", "hate, manual, tedious, struggle, painful")
     posts_per_source = st.sidebar.slider("Posts per Source", 10, 100, 20)
     
     run_search = st.sidebar.button("🚀 Start Hunting", type="primary")
 
     # --- Main Logic ---
     if run_search:
-        if not google_api_key:
-            st.error("Please configure your Gemini API key in the sidebar or .env file.")
+        if not openrouter_api_key:
+            st.error("Please configure your OpenRouter API key in the sidebar or .env file.")
             return
         
         # Check if at least one source is enabled
@@ -232,7 +257,13 @@ def main():
             
             # Use aggregator for parallel fetching
             aggregator = Aggregator(max_workers=min(len(sources_to_fetch), 5))
-            result = aggregator.fetch_from_sources(sources_to_fetch, clean_keywords, posts_per_source)
+            result = aggregator.fetch_from_sources(
+                sources_to_fetch, 
+                clean_keywords, 
+                posts_per_source,
+                browse_mode=browse_mode,
+                sort_by=sort_by
+            )
             
             all_posts = result['posts']
             errors = result['errors']
@@ -308,7 +339,7 @@ def main():
             status.update(label="Scraping Complete!", state="complete", expanded=False)
 
         # 2. Analysis Phase
-        analyzer = Analyzer(api_key=google_api_key)
+        analyzer = Analyzer(api_key=openrouter_api_key)
         db = get_database()
         trend_analyzer = TrendAnalyzer(db)
         
@@ -326,13 +357,13 @@ def main():
                 st.error(f"**Error:** {str(e)}")
                 st.info("""
                 **Common causes:**
-                - Invalid or missing Google Gemini API key
+                - Invalid or missing OpenRouter API key
                 - API rate limit exceeded
                 - Network connectivity issues
                 
                 **Solutions:**
-                1. Check your `GOOGLE_API_KEY` in the sidebar
-                2. Verify the API key at https://ai.google.dev/
+                1. Check your `OPENROUTER_API_KEY` in the sidebar
+                2. Verify the API key at https://openrouter.ai/settings/keys
                 3. Wait a few minutes if rate limited
                 """)
                 return
